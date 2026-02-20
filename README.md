@@ -1,5 +1,5 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
-[![GitHub License](https://img.shields.io/github/license/RKStudios-hub/MCmadeEasy)](LICENSE)
+![GitHub stars](https://img.shields.io/github/stars/RKStudios-hub/MCmadeEasy?style=social)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-red)](https://fastapi.tiangolo.com/)
 [![Status](https://img.shields.io/badge/status-work--in--progress-orange)](https://github.com/RKStudios-hub/MCmadeEasy)
