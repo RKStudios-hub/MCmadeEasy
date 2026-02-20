@@ -1,4 +1,4 @@
-[![GitHub Stars]([https://img.shields.io/github/stars/RKStudios-hub/MCmadeEasy](https://img.shields.io/github/license/RKStudios-hub/MCmadeEasy))](https://github.com/RKStudios-hub/MCmadeEasy/stargazers)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 [![GitHub License](https://img.shields.io/github/license/RKStudios-hub/MCmadeEasy)](LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-red)](https://fastapi.tiangolo.com/)
