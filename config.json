@@ -1,0 +1,88 @@
+{
+    "ai": {
+        "enabled": true,
+        "mode": "auto-safe",
+        "api_key": "YOUR_GROQ_API_KEY_HERE",
+        "model": "llama-3.1-8b-instant",
+        "api_key_secondary": "YOUR_GROQ_API_KEY_HERE",
+        "model_secondary": "llama-3.1-8b-instant",
+        "personality": "neutral",
+        "ai_name": "Ava",
+        "response_method": "msg",
+        "roles": {
+            "owner": [
+                "hrupe"
+            ],
+            "admin": [
+                "Admin",
+                "Sweete_Nightmare"
+            ],
+            "moderator": [],
+            "builder": [],
+            "vip": []
+        },
+        "permissions": {
+            "owner": [
+                "*"
+            ],
+            "admin": [
+                "time",
+                "weather",
+                "give",
+                "tp",
+                "summon",
+                "heal",
+                "god",
+                "gamemode",
+                "xp",
+                "kill",
+                "save",
+                "kick",
+                "ban",
+                "unban",
+                "fly",
+                "feed",
+                "repair",
+                "enchant",
+                "effect",
+                "setblock",
+                "fill"
+            ],
+            "moderator": [
+                "kick",
+                "ban",
+                "unban",
+                "mute",
+                "tempban",
+                "warn"
+            ],
+            "builder": [
+                "gamemode",
+                "give",
+                "fly",
+                "tp"
+            ],
+            "vip": [
+                "fly",
+                "feed",
+                "heal",
+                "tp"
+            ],
+            "player": []
+        }
+    },
+    "server": {
+        "default_ram": "1G",
+        "max_ram": "4G",
+        "java_path": "C:\\Users\\hrupe\\AppData\\Local\\Programs\\Eclipse Adoptium\\jdk-17.0.17.10-hotspot\\bin\\java.exe"
+    },
+    "network": {
+        "host": "127.0.0.1",
+        "port": 8001
+    },
+    "dynmap": {
+        "enabled": true,
+        "host": "127.0.0.1",
+        "port": 8123
+    }
+}

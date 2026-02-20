@@ -1,0 +1,88 @@
+{
+  "players": {
+    "Sweete_Nightmare": {
+      "name": "Sweete_Nightmare",
+      "first_seen": 1771500403.3928878,
+      "last_seen": 1771575774.1618314,
+      "role": "player",
+      "playstyle": null,
+      "trust_score": 0.5,
+      "preferred_tone": "casual",
+      "frequent_commands": [],
+      "risk_flag": false,
+      "conversation_count": 180,
+      "last_intent": "scan",
+      "last_target": null,
+      "server_specific": {}
+    },
+    "\u001b[38;2;255;255;85mSweete_Nightmare": {
+      "name": "\u001b[38;2;255;255;85mSweete_Nightmare",
+      "first_seen": 1771502409.4678695,
+      "last_seen": 1771571353.091704,
+      "role": "player",
+      "playstyle": null,
+      "trust_score": 0.5,
+      "preferred_tone": "casual",
+      "frequent_commands": [],
+      "risk_flag": false,
+      "conversation_count": 0,
+      "last_intent": null,
+      "last_target": null,
+      "server_specific": {}
+    }
+  },
+  "conversations": {
+    "Sweete_Nightmare": [
+      {
+        "user": "whats the terrain around me?",
+        "ai": "Done.",
+        "time": 1771572021.1952322
+      },
+      {
+        "user": "give me 64 dirt",
+        "ai": "Done.",
+        "time": 1771572080.4700916
+      },
+      {
+        "user": "give me 60 dirt",
+        "ai": "Done.",
+        "time": 1771572092.1057863
+      },
+      {
+        "user": "give me a sword of iron",
+        "ai": "Done.",
+        "time": 1771572124.6101758
+      },
+      {
+        "user": "time set day",
+        "ai": "Command executed.",
+        "time": 1771572211.377689
+      },
+      {
+        "user": "give me 30 golden apple",
+        "ai": "Done.",
+        "time": 1771572467.7315135
+      },
+      {
+        "user": "give me 30 apple of gold",
+        "ai": "Done.",
+        "time": 1771572469.2806485
+      },
+      {
+        "user": "hello",
+        "ai": "Done.",
+        "time": 1771575556.0818017
+      },
+      {
+        "user": "scan the area",
+        "ai": "Done.",
+        "time": 1771575737.3047388
+      },
+      {
+        "user": "hello?",
+        "ai": "Hey Sweete_Nightmare, how's it going? Not much going on, just the usual blocky landscape.",
+        "time": 1771575775.9276128
+      }
+    ]
+  }
+}
