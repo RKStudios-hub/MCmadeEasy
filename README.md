@@ -1,10 +1,10 @@
+# 🐺 MCmadeEasy
+
 [![Stars](https://img.shields.io/github/stars/RKStudios-hub/MCmadeEasy?style=flat)](https://github.com/RKStudios-hub/MCmadeEasy/stargazers)
 [![License](https://img.shields.io/github/license/RKStudios-hub/MCmadeEasy?style=flat)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-red?style=flat)](https://fastapi.tiangolo.com/)
 [![Status](https://img.shields.io/badge/Work-In_Progress-orange?style=flat)](https://github.com/RKStudios-hub/MCmadeEasy)
-
-# 🐺 MCmadeEasy
 
 ### (Work in Progress — But Already Thinking.)
 
@@ -153,4 +153,13 @@ The goal isn't just server management.
 
 It's giving your Minecraft world a mind.
 
+---
+
+
+```
+Note- This project is an independent fan-made creation and is not affiliated with, endorsed by, or connected to Mojang Studios or Minecraft in any way.
+Please do not report bugs, issues, or problems related to this project to Mojang or the Minecraft support team. Any feedback, bug reports, or questions should be directed only to the developer of this project.
+Thank you for your understanding and support!
+```
+Made with 🖤 by RK Studios
 ---
