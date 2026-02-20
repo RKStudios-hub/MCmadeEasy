@@ -1,4 +1,4 @@
-<h1 align="center"><img width="100" height="100" alt="MC" src="https://github.com/user-attachments/assets/8b8b5aa9-f9e9-4200-92f4-0dd9bf53f883" /> </h1>
+<h1 align="center"><img width="150" height="150" alt="MC" src="https://github.com/user-attachments/assets/8b8b5aa9-f9e9-4200-92f4-0dd9bf53f883" /> </h1>
 <h1 align="center">MCmadeEasy</h1>
 
 
