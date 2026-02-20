@@ -3,7 +3,7 @@
     src="https://github.com/user-attachments/assets/73db56a8-3fa4-4f71-a232-648d387dcf6b"
     width="50"
     height="50"
-    style="vertical-align: -8px;"
+    style="vertical-align: -20px;"
   />
   MCmadeEasy
 </h1>
