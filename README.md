@@ -1,8 +1,8 @@
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
-![GitHub stars](https://img.shields.io/github/stars/RKStudios-hub/MCmadeEasy?style=social)
-[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-red)](https://fastapi.tiangolo.com/)
-[![Status](https://img.shields.io/badge/status-work--in--progress-orange)](https://github.com/RKStudios-hub/MCmadeEasy)
+[![Stars](https://img.shields.io/github/stars/RKStudios-hub/MCmadeEasy?style=flat)](https://github.com/RKStudios-hub/MCmadeEasy/stargazers)
+[![License](https://img.shields.io/github/license/RKStudios-hub/MCmadeEasy?style=flat)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-red?style=flat)](https://fastapi.tiangolo.com/)
+[![Status](https://img.shields.io/badge/Work-In_Progress-orange?style=flat)](https://github.com/RKStudios-hub/MCmadeEasy)
 
 # 🐺 MCmadeEasy
 
