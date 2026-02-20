@@ -1,4 +1,12 @@
-<h1 align="center"><img width="50" height="50" alt="Logo" src="https://github.com/user-attachments/assets/73db56a8-3fa4-4f71-a232-648d387dcf6b" />   MCmadeEasy</h1> 
+<h1 align="center">
+  <img 
+    src="https://github.com/user-attachments/assets/73db56a8-3fa4-4f71-a232-648d387dcf6b"
+    width="50"
+    height="50"
+    style="vertical-align: -8px;"
+  />
+  MCmadeEasy
+</h1>
 
 
 [![Stars](https://img.shields.io/github/stars/RKStudios-hub/MCmadeEasy?style=flat)](https://github.com/RKStudios-hub/MCmadeEasy/stargazers)
