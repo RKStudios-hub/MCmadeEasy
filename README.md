@@ -1,5 +1,5 @@
-<h1 align="center"><img width="50" height="50" alt="MC" src="https://github.com/user-attachments/assets/8b8b5aa9-f9e9-4200-92f4-0dd9bf53f883" style="vertical-align: -100px;"/> MCmadeEasy</h1>
-
+<img width="50" height="50" alt="MC" align="center" src="https://github.com/user-attachments/assets/8b8b5aa9-f9e9-4200-92f4-0dd9bf53f883" /> 
+<h1 align="center">MCmadeEasy</h1>
 
 
 [![Stars](https://img.shields.io/github/stars/RKStudios-hub/MCmadeEasy?style=flat)](https://github.com/RKStudios-hub/MCmadeEasy/stargazers)
