@@ -34,6 +34,14 @@ server = ServerManager()
 set_server_manager(server)
 console_subscribers = []
 
+def broadcast_console_message(message: str):
+    for ws in console_subscribers[:]:
+        try:
+            ws.send_json({"ai": None, "chat": None, "lines": [f"[ModLoader] {message}"]})
+        except:
+            if ws in console_subscribers:
+                console_subscribers.remove(ws)
+
 def get_profile_path(name):
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, "servers", name)
@@ -387,3 +395,96 @@ async def broadcast_console():
 @app.on_event("startup")
 async def startup():
     asyncio.create_task(broadcast_console())
+
+from integrations.mod_loader import mod_loader, set_server_manager as set_modloader_manager
+from integrations.drive_backup import backup_manager
+from integrations.grief_protection import grief_protection
+from integrations.web_hosting import hosting_manager
+
+set_modloader_manager(server)
+
+@app.get("/mods/{profile}")
+def get_mods(profile: str):
+    return mod_loader.get_mods_list(profile)
+
+@app.get("/mods/search")
+def search_mods(query: str):
+    return mod_loader.get_modrinth_search(query)
+
+@app.get("/mods/{project_id}/versions")
+def get_mod_versions(project_id: str):
+    return mod_loader.get_mod_versions(project_id)
+
+@app.post("/mods/{profile}/install")
+async def install_mod(profile: str, request: Request):
+    try:
+        body = await request.json()
+        mod_url = body.get("url")
+        mod_name = body.get("name", "Unknown Mod")
+        
+        if not mod_url:
+            return {"success": False, "error": "No mod URL provided"}
+        
+        result = mod_loader.install_mod(profile, mod_url)
+        
+        if result.get("success"):
+            broadcast_console_message(f"Installing mod: {mod_name}...")
+            broadcast_console_message(f"Successfully installed: {mod_name}")
+            return {"success": True, "file": result.get("file")}
+        else:
+            broadcast_console_message(f"Failed to install: {mod_name} - {result.get('error')}")
+            return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.delete("/mods/{profile}/{mod_name}")
+def remove_mod(profile: str, mod_name: str):
+    return mod_loader.remove_mod(profile, mod_name)
+
+@app.get("/backup/{profile}")
+def create_backup(profile: str):
+    return backup_manager.create_backup(profile)
+
+@app.get("/backup/list")
+def list_backups():
+    return backup_manager.list_backups()
+
+@app.post("/backup/restore")
+def restore_backup(request: Request):
+    return {"success": True, "message": "Restore functionality requires Google Drive integration"}
+
+@app.post("/backup/schedule")
+def schedule_backup(request: Request):
+    return backup_manager.schedule_auto_backup("default")
+
+@app.get("/grief/status")
+def grief_status():
+    return grief_protection.get_stats()
+
+@app.post("/grief/enable")
+def grief_enable(request: Request):
+    return grief_protection.enable(True)
+
+@app.post("/grief/disable")
+def grief_disable(request: Request):
+    return grief_protection.enable(False)
+
+@app.post("/grief/rollback")
+def grief_rollback(request: Request):
+    return grief_protection.rollback_player("player", 300)
+
+@app.get("/host/status")
+def host_status():
+    return hosting_manager.get_status()
+
+@app.post("/host/start")
+def host_start(request: Request):
+    return hosting_manager.start_server()
+
+@app.post("/host/stop")
+def host_stop(request: Request):
+    return hosting_manager.stop_server()
+
+@app.post("/host/config")
+def host_config(request: Request):
+    return hosting_manager.update_config()

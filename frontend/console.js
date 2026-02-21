@@ -477,4 +477,227 @@ function connectConsole() {
 setInterval(updateStatus, 5000);
 loadProfiles();
 loadAIStatus();
+
+// Mod Manager Functions
+async function searchModsBtn() {
+    const query = document.getElementById('mod-search').value;
+    if (!query) return;
+    await searchMods({target: {value: query}});
+}
+
+async function searchMods(event) {
+    const query = event.target.value;
+    if (query.length < 2) return;
+    
+    try {
+        const res = await fetch(`${API}/mods/search?query=${encodeURIComponent(query)}`);
+        const mods = await res.json();
+        
+        const resultsDiv = document.getElementById('mod-search-results');
+        resultsDiv.innerHTML = mods.map(mod => `
+            <div class="mod-result-item" style="padding: 10px; border-bottom: 1px solid var(--border);">
+                <strong>${mod.title}</strong>
+                <p style="color: var(--text-muted); font-size: 12px;">${mod.description || ''}</p>
+                <button class="btn btn-small" onclick="installMod('${mod.id}', '${mod.title.replace(/'/g, "\\'")}')">Install</button>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.log('Failed to search mods', e);
+    }
+}
+
+async function installMod(projectId, modTitle) {
+    if (!currentProfile) {
+        alert('Select a profile first');
+        return;
+    }
+    
+    try {
+        const versionsRes = await fetch(`${API}/mods/${projectId}/versions`);
+        const versions = await versionsRes.json();
+        
+        if (versions.length > 0 && versions[0].files && versions[0].files.length > 0) {
+            const file = versions[0].files[0];
+            const installRes = await fetch(`${API}/mods/${currentProfile}/install`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    url: file.url,
+                    name: modTitle || projectId
+                })
+            });
+            const result = await installRes.json();
+            
+            if (result.success) {
+                alert(`Successfully installed: ${modTitle || projectId}`);
+                loadInstalledMods();
+            } else {
+                alert('Failed to install: ' + result.error);
+            }
+        } else {
+            alert('No files available for this mod');
+        }
+    } catch (e) {
+        console.log('Failed to install mod', e);
+        alert('Failed to install mod');
+    }
+}
+
+async function loadInstalledMods() {
+    if (!currentProfile) return;
+    try {
+        const res = await fetch(`${API}/mods/${currentProfile}`);
+        const mods = await res.json();
+        
+        const list = document.getElementById('installed-mods-list');
+        if (mods.length === 0) {
+            list.innerHTML = '<p style="color: var(--text-muted);">No mods installed</p>';
+        } else {
+            list.innerHTML = mods.map(mod => `
+                <div style="padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                    <span>${mod.name}</span>
+                    <button class="btn btn-small btn-danger" onclick="removeMod('${mod.name}')">Remove</button>
+                </div>
+            `).join('');
+        }
+    } catch (e) {
+        console.log('Failed to load mods', e);
+    }
+}
+
+async function removeMod(modName) {
+    if (!currentProfile) return;
+    try {
+        await fetch(`${API}/mods/${currentProfile}/${modName}`, {method: 'DELETE'});
+        loadInstalledMods();
+    } catch (e) {
+        alert('Failed to remove mod');
+    }
+}
+
+// Backup Functions
+async function createBackup() {
+    if (!currentProfile) {
+        alert('Select a profile first');
+        return;
+    }
+    try {
+        const res = await fetch(`${API}/backup/${currentProfile}`);
+        const result = await res.json();
+        if (result.success) {
+            alert('Backup created successfully!');
+            loadBackupHistory();
+        } else {
+            alert('Backup failed: ' + result.error);
+        }
+    } catch (e) {
+        alert('Failed to create backup');
+    }
+}
+
+async function loadBackupHistory() {
+    try {
+        const res = await fetch(`${API}/backup/list`);
+        const backups = await res.json();
+        
+        const list = document.getElementById('backup-history-list');
+        if (backups.length === 0) {
+            list.innerHTML = '<p style="color: var(--text-muted);">No backups yet</p>';
+        } else {
+            list.innerHTML = backups.map(b => `
+                <div style="padding: 10px; border-bottom: 1px solid var(--border);">
+                    <strong>${b.name}</strong>
+                    <p style="color: var(--text-muted); font-size: 12px;">${b.timestamp}</p>
+                </div>
+            `).join('');
+        }
+    } catch (e) {
+        console.log('Failed to load backup history', e);
+    }
+}
+
+// Grief Protection Functions
+async function toggleGriefProtection() {
+    const enabled = document.getElementById('grief-enabled').checked;
+    try {
+        const endpoint = enabled ? '/grief/enable' : '/grief/disable';
+        await fetch(`${API}${endpoint}`, {method: 'POST'});
+    } catch (e) {
+        console.log('Failed to toggle grief protection', e);
+    }
+}
+
+async function loadGriefStatus() {
+    try {
+        const res = await fetch(`${API}/grief/status`);
+        const status = await res.json();
+        
+        document.getElementById('grief-enabled').checked = status.enabled;
+    } catch (e) {
+        console.log('Failed to load grief status', e);
+    }
+}
+
+// Web Hosting Functions
+async function startHosting() {
+    const port = document.getElementById('host-port').value;
+    try {
+        const res = await fetch(`${API}/host/start`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({port: parseInt(port)})
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+            document.getElementById('host-start-btn').classList.add('hidden');
+            document.getElementById('host-stop-btn').classList.remove('hidden');
+            document.getElementById('host-status-text').textContent = 'Running';
+            document.getElementById('host-status-text').classList.remove('stopped');
+            document.getElementById('host-status-text').classList.add('running');
+            document.getElementById('host-local-url').textContent = result.local_url || `http://localhost:${port}`;
+            document.getElementById('host-network-url').textContent = result.network_url || '';
+        } else {
+            alert('Failed to start hosting: ' + result.error);
+        }
+    } catch (e) {
+        alert('Failed to start hosting');
+    }
+}
+
+async function stopHosting() {
+    try {
+        const res = await fetch(`${API}/host/stop`, {method: 'POST'});
+        const result = await res.json();
+        
+        if (result.success) {
+            document.getElementById('host-start-btn').classList.remove('hidden');
+            document.getElementById('host-stop-btn').classList.add('hidden');
+            document.getElementById('host-status-text').textContent = 'Stopped';
+            document.getElementById('host-status-text').classList.remove('running');
+            document.getElementById('host-status-text').classList.add('stopped');
+        }
+    } catch (e) {
+        alert('Failed to stop hosting');
+    }
+}
+
+async function loadHostingStatus() {
+    try {
+        const res = await fetch(`${API}/host/status`);
+        const status = await res.json();
+        
+        if (status.running) {
+            document.getElementById('host-start-btn').classList.add('hidden');
+            document.getElementById('host-stop-btn').classList.remove('hidden');
+            document.getElementById('host-status-text').textContent = 'Running';
+            document.getElementById('host-status-text').classList.remove('stopped');
+            document.getElementById('host-status-text').classList.add('running');
+            document.getElementById('host-local-url').textContent = status.local_url || '-';
+            document.getElementById('host-network-url').textContent = status.network_url || '-';
+        }
+    } catch (e) {
+        console.log('Failed to load hosting status', e);
+    }
+}
 loadConfig();

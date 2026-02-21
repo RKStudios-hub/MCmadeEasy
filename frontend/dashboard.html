@@ -792,6 +792,10 @@
                 <button class="menu-item" data-tab="map" onclick="switchTab('map')"><i data-lucide="map"></i> Dynmap</button>
                 <button class="menu-item" data-tab="console" onclick="switchTab('console')"><i data-lucide="terminal"></i> Console</button>
                 <button class="menu-item" data-tab="players" onclick="switchTab('players')"><i data-lucide="users"></i> Players</button>
+                <button class="menu-item" data-tab="mods" onclick="switchTab('mods')"><i data-lucide="puzzle"></i> Mods</button>
+                <button class="menu-item" data-tab="backup" onclick="switchTab('backup')"><i data-lucide="cloud"></i> Backups</button>
+                <button class="menu-item" data-tab="grief" onclick="switchTab('grief')"><i data-lucide="shield"></i> Protection</button>
+                <button class="menu-item" data-tab="hosting" onclick="switchTab('hosting')"><i data-lucide="globe"></i> Hosting</button>
             </nav>
             <div class="sidebar-footer">
                 <div id="server-status" class="status-indicator stopped">
@@ -1017,6 +1021,123 @@
                     <p style="color: var(--text-muted);">No players online</p>
                 </div>
             </div>
+
+            <!-- Mods Tab -->
+            <div id="tab-mods" class="tab-content hidden">
+                <div class="settings-grid">
+                    <div class="settings-group glass">
+                        <h3><i data-lucide="puzzle"></i> Mod Manager</h3>
+                        <div class="input-row">
+                            <label>Search Mods</label>
+                            <input type="text" id="mod-search" placeholder="Search Modrinth..." onkeyup="searchMods(event)">
+                        </div>
+                        <button class="btn btn-primary" onclick="searchModsBtn()"><i data-lucide="search"></i> Search</button>
+                        <div id="mod-search-results" style="margin-top: 15px; max-height: 300px; overflow-y: auto;"></div>
+                    </div>
+                    <div class="settings-group glass">
+                        <h3>Installed Mods</h3>
+                        <div id="installed-mods-list">
+                            <p style="color: var(--text-muted);">No mods installed</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup Tab -->
+            <div id="tab-backup" class="tab-content hidden">
+                <div class="settings-grid">
+                    <div class="settings-group glass">
+                        <h3><i data-lucide="cloud"></i> Google Drive Backup</h3>
+                        <div class="toggle-row">
+                            <label>Enable Auto Backup</label>
+                            <input type="checkbox" id="auto-backup-toggle" class="toggle">
+                        </div>
+                        <div class="input-row">
+                            <label>Backup Interval (hours)</label>
+                            <input type="number" id="backup-interval" min="1" max="168" value="24">
+                        </div>
+                        <div class="input-row">
+                            <label>Max Backups to Keep</label>
+                            <input type="number" id="max-backups" min="1" max="50" value="10">
+                        </div>
+                        <button class="btn btn-primary" onclick="createBackup()"><i data-lucide="download"></i> Create Backup Now</button>
+                    </div>
+                    <div class="settings-group glass">
+                        <h3>Backup History</h3>
+                        <div id="backup-history-list">
+                            <p style="color: var(--text-muted);">No backups yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grief Protection Tab -->
+            <div id="tab-grief" class="tab-content hidden">
+                <div class="settings-grid">
+                    <div class="settings-group glass">
+                        <h3><i data-lucide="shield"></i> Grief Protection</h3>
+                        <div class="toggle-row">
+                            <label>Enable Protection</label>
+                            <input type="checkbox" id="grief-enabled" class="toggle" onchange="toggleGriefProtection()">
+                        </div>
+                        <div class="input-row">
+                            <label>Suspicious Threshold</label>
+                            <input type="number" id="grief-threshold" min="5" max="100" value="10">
+                        </div>
+                        <div class="toggle-row">
+                            <label>Alert Admins</label>
+                            <input type="checkbox" id="grief-alert" class="toggle" checked>
+                        </div>
+                        <div class="toggle-row">
+                            <label>Enable Rollback</label>
+                            <input type="checkbox" id="grief-rollback" class="toggle" checked>
+                        </div>
+                    </div>
+                    <div class="settings-group glass">
+                        <h3>Recent Events</h3>
+                        <div id="grief-events-list">
+                            <p style="color: var(--text-muted);">No events recorded</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Web Hosting Tab -->
+            <div id="tab-hosting" class="tab-content hidden">
+                <div class="settings-grid">
+                    <div class="settings-group glass">
+                        <h3><i data-lucide="globe"></i> Web Hosting Manager</h3>
+                        <div class="status-card" id="hosting-status">
+                            <div class="status-row">
+                                <span>Status:</span>
+                                <span id="host-status-text" class="status-value stopped">Stopped</span>
+                            </div>
+                            <div class="status-row">
+                                <span>Local URL:</span>
+                                <span id="host-local-url" class="status-value">-</span>
+                            </div>
+                            <div class="status-row">
+                                <span>Network URL:</span>
+                                <span id="host-network-url" class="status-value">-</span>
+                            </div>
+                        </div>
+                        <div class="input-row">
+                            <label>Port</label>
+                            <input type="number" id="host-port" min="1024" max="65535" value="8000">
+                        </div>
+                        <div class="toggle-row">
+                            <label>Public Access</label>
+                            <input type="checkbox" id="host-public" class="toggle">
+                        </div>
+                        <div class="toggle-row">
+                            <label>Password Protected</label>
+                            <input type="checkbox" id="host-password" class="toggle">
+                        </div>
+                        <button class="btn btn-primary" id="host-start-btn" onclick="startHosting()"><i data-lucide="play"></i> Start Server</button>
+                        <button class="btn btn-danger hidden" id="host-stop-btn" onclick="stopHosting()"><i data-lucide="stop-circle"></i> Stop Server</button>
+                    </div>
+                </div>
+            </div>
         </main>
     </section>
 
@@ -1139,6 +1260,11 @@
             
             document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
             document.querySelector(`.menu-item[data-tab="${tabId}"]`).classList.add('active');
+            
+            if (tabId === 'mods') loadInstalledMods();
+            if (tabId === 'backup') loadBackupHistory();
+            if (tabId === 'grief') loadGriefStatus();
+            if (tabId === 'hosting') loadHostingStatus();
         }
 
         // Modal
