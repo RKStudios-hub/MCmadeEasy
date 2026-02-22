@@ -8,7 +8,7 @@ class ModLoader:
         self.server_manager = server_manager
     
     def get_mods_dir(self, profile):
-        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         server_path = os.path.join(base, "servers", profile)
         if os.path.exists(os.path.join(server_path, "plugins")):
             return os.path.join(server_path, "plugins")
@@ -32,16 +32,20 @@ class ModLoader:
         return mods
     
     def install_mod(self, profile, mod_url):
-        mods_path = Path(self.get_mods_dir(profile))
-        mods_path.mkdir(parents=True, exist_ok=True)
+        mods_path = self.get_mods_dir(profile)
+        os.makedirs(mods_path, exist_ok=True)
         
         filename = mod_url.split("/")[-1]
-        dest_path = mods_path / filename
+        dest_path = os.path.join(mods_path, filename)
+        
+        print(f"[ModLoader] Installing to: {dest_path}")
         
         try:
             urllib.request.urlretrieve(mod_url, dest_path)
+            print(f"[ModLoader] Successfully installed: {filename}")
             return {"success": True, "file": filename}
         except Exception as e:
+            print(f"[ModLoader] Error: {e}")
             return {"success": False, "error": str(e)}
     
     def remove_mod(self, profile, mod_name):

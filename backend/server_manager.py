@@ -138,3 +138,35 @@ class ServerManager:
             if "Found" in line or "Located" in line:
                 return line
         return None
+    
+    def get_stats(self):
+        """Get server stats"""
+        if not self.is_running():
+            return {"running": False}
+        
+        import psutil
+        try:
+            proc = psutil.Process(self.process.pid)
+            cpu = proc.cpu_percent(interval=0.1)
+            mem = proc.memory_info().rss / (1024**3)
+        except:
+            cpu = 0
+            mem = 0
+        
+        players = []
+        for line in self.output_lines[-50:]:
+            if "joined the game" in line.lower():
+                name = line.split("joined")[0].split("]")[-1].strip()
+                if name and name not in players:
+                    players.append(name)
+            elif "left the game" in line.lower():
+                name = line.split("left")[0].split("]")[-1].strip()
+                if name in players:
+                    players.remove(name)
+        
+        return {
+            "running": True,
+            "cpu": round(cpu, 1),
+            "memory": round(mem, 2),
+            "players": players
+        }

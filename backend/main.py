@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import asyncio
 import json
 import os
@@ -11,13 +12,29 @@ from profile_manager import create_profile, list_profiles, get_profile, update_p
 from downloader import (
     get_vanilla_versions, download_vanilla,
     get_paper_versions, get_paper_builds, download_paper,
-    get_fabric_versions
+    get_purpur_versions, get_purpur_builds, download_purpur,
+    get_spigot_versions, download_spigot,
+    get_forge_versions, get_forge_builds, download_forge,
+    get_latest_forge_version,
+    get_neoforge_versions, get_neoforge_builds, download_neoforge,
+    get_latest_neoforge_version,
+    get_fabric_versions, download_fabric_mc
 )
 from server_manager import ServerManager
 import ai_engine
 from world.world_intelligence import world_intelligence, set_server_manager
+from integrations.mod_loader import ModLoader
+from integrations.drive_backup import backup_manager
+from integrations.grief_protection import grief_protection
+from integrations.web_hosting import hosting_manager
 
 app = FastAPI()
+
+server = ServerManager()
+set_server_manager(server)
+console_subscribers = []
+
+mod_loader = ModLoader(server)
 
 @app.get("/")
 def root():
@@ -30,14 +47,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-server = ServerManager()
+console_subscribers = []
 set_server_manager(server)
 console_subscribers = []
 
-def broadcast_console_message(message: str):
+async def broadcast_console_message(message: str):
     for ws in console_subscribers[:]:
         try:
-            ws.send_json({"ai": None, "chat": None, "lines": [f"[ModLoader] {message}"]})
+            await ws.send_json({"ai": None, "chat": None, "lines": [f"[ModLoader] {message}"]})
         except:
             if ws in console_subscribers:
                 console_subscribers.remove(ws)
@@ -80,7 +97,41 @@ def download_server(name: str, software: str, version: str, build: str = None):
     if software == "vanilla":
         success, msg = download_vanilla(version, profile_path)
     elif software == "paper":
+        if not build:
+            builds = get_paper_builds(version) or []
+            build = builds[-1] if builds else None
+        if not build:
+            return {"success": False, "message": "No builds available for this version"}
         success, msg = download_paper(version, build, profile_path)
+    elif software == "purpur":
+        if not build:
+            builds = get_purpur_builds(version) or []
+            build = builds[-1] if builds else None
+        if not build:
+            return {"success": False, "message": "No builds available for this version"}
+        success, msg = download_purpur(version, build, profile_path)
+    elif software == "spigot" or software == "bukkit":
+        success, msg = download_spigot(version, profile_path)
+    elif software == "forge":
+        if not build:
+            full_version = get_latest_forge_version(version)
+        else:
+            full_version = f"{version}-{build}"
+        if not full_version:
+            return {"success": False, "message": "Could not find Forge version"}
+        success, msg = download_forge(version, full_version, profile_path)
+    elif software == "neoforge":
+        return {"success": False, "message": "NeoForge requires manual download. Download from maven.neoforged.net and place server.jar in the server folder."}
+    elif software == "fabric":
+        return {"success": False, "message": "Fabric requires manual download. Download from fabricmc.net and place server.jar in the server folder."}
+    elif software == "forge":
+        return {"success": False, "message": "Forge requires manual download. Use Paper or Purpur instead."}
+    elif software == "quilt":
+        return {"success": False, "message": "Quilt requires manual download. Use Paper or Purpur instead."}
+    elif software == "leaf":
+        return {"success": False, "message": "Leaf requires manual download. Use Paper or Purpur instead."}
+    elif software == "spigot":
+        return {"success": False, "message": "Spigot requires BuildTools to compile. Use Paper or Purpur instead."}
     else:
         return {"success": False, "message": "Unsupported software"}
     
@@ -126,6 +177,14 @@ def status():
 def start(name: str):
     profile_path = get_profile_path(name)
     profile = get_profile(name)
+    
+    if not profile:
+        return {"success": False, "message": f"Profile '{name}' not found"}
+    
+    jar_path = os.path.join(profile_path, "server.jar")
+    if not os.path.exists(jar_path):
+        return {"success": False, "message": "No server.jar found. Please download server software first using the Server Setup tab."}
+    
     ram = profile.get("ram", "4G") if profile else "4G"
     success, msg = server.start(profile_path, ram)
     return {"success": success, "message": msg}
@@ -166,6 +225,10 @@ async def command(request: Request, cmd: str = None):
 @app.get("/console/history")
 def console_history():
     return server.get_output()
+
+@app.get("/server/stats")
+def get_server_stats():
+    return server.get_stats()
 
 @app.get("/server/properties/{profile}")
 def get_server_properties(profile: str):
@@ -396,24 +459,18 @@ async def broadcast_console():
 async def startup():
     asyncio.create_task(broadcast_console())
 
-from integrations.mod_loader import mod_loader, set_server_manager as set_modloader_manager
-from integrations.drive_backup import backup_manager
-from integrations.grief_protection import grief_protection
-from integrations.web_hosting import hosting_manager
-
-set_modloader_manager(server)
-
-@app.get("/mods/{profile}")
-def get_mods(profile: str):
-    return mod_loader.get_mods_list(profile)
-
 @app.get("/mods/search")
 def search_mods(query: str):
-    return mod_loader.get_modrinth_search(query)
+    results = mod_loader.get_modrinth_search(query)
+    return JSONResponse(content=results)
 
 @app.get("/mods/{project_id}/versions")
 def get_mod_versions(project_id: str):
     return mod_loader.get_mod_versions(project_id)
+
+@app.get("/mods/{profile}")
+def get_mods(profile: str):
+    return mod_loader.get_mods_list(profile)
 
 @app.post("/mods/{profile}/install")
 async def install_mod(profile: str, request: Request):
@@ -428,11 +485,11 @@ async def install_mod(profile: str, request: Request):
         result = mod_loader.install_mod(profile, mod_url)
         
         if result.get("success"):
-            broadcast_console_message(f"Installing mod: {mod_name}...")
-            broadcast_console_message(f"Successfully installed: {mod_name}")
+            await broadcast_console_message(f"Installing mod: {mod_name}...")
+            await broadcast_console_message(f"Successfully installed: {mod_name}")
             return {"success": True, "file": result.get("file")}
         else:
-            broadcast_console_message(f"Failed to install: {mod_name} - {result.get('error')}")
+            await broadcast_console_message(f"Failed to install: {mod_name} - {result.get('error')}")
             return result
     except Exception as e:
         return {"success": False, "error": str(e)}

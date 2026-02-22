@@ -673,9 +673,42 @@
 
         /* Players */
         .players-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            padding: 20px;
+        }
+        
+        .player-card {
             display: flex;
-            flex-direction: column;
-            gap: 8px;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+        
+        .player-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+        
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .player-name {
+            font-weight: 500;
         }
 
         .player-item {
@@ -762,7 +795,6 @@
         </div>
         <div class="nav-right">
             <button class="icon-btn"><i data-lucide="bell"></i></button>
-            <div class="user-avatar"></div>
         </div>
     </nav>
 
@@ -1023,24 +1055,8 @@
             </div>
 
             <!-- Mods Tab -->
-            <div id="tab-mods" class="tab-content hidden">
-                <div class="settings-grid">
-                    <div class="settings-group glass">
-                        <h3><i data-lucide="puzzle"></i> Mod Manager</h3>
-                        <div class="input-row">
-                            <label>Search Mods</label>
-                            <input type="text" id="mod-search" placeholder="Search Modrinth..." onkeyup="searchMods(event)">
-                        </div>
-                        <button class="btn btn-primary" onclick="searchModsBtn()"><i data-lucide="search"></i> Search</button>
-                        <div id="mod-search-results" style="margin-top: 15px; max-height: 300px; overflow-y: auto;"></div>
-                    </div>
-                    <div class="settings-group glass">
-                        <h3>Installed Mods</h3>
-                        <div id="installed-mods-list">
-                            <p style="color: var(--text-muted);">No mods installed</p>
-                        </div>
-                    </div>
-                </div>
+            <div id="tab-mods" class="tab-content hidden" style="height: calc(100vh - 120px);">
+                <iframe id="mod-browser-frame" src="mod-browser.html" style="width: 100%; height: 100%; border: none; border-radius: 12px; background: #0e1015;"></iframe>
             </div>
 
             <!-- Backup Tab -->
@@ -1152,9 +1168,11 @@
             <div class="input-row">
                 <label>Server Software</label>
                 <select id="new-profile-software">
-                    <option value="paper">Paper</option>
-                    <option value="fabric">Fabric</option>
-                    <option value="spigot">Spigot</option>
+                    <option value="paper">Paper (Recommended)</option>
+                    <option value="purpur">Purpur</option>
+                    <option value="fabric">Fabric (Manual)</option>
+                    <option value="forge">Forge (Manual)</option>
+                    <option value="neoforge">NeoForge (Manual)</option>
                     <option value="vanilla">Vanilla</option>
                 </select>
             </div>
@@ -1192,6 +1210,8 @@
         const API = "http://localhost:8001";
         let ws = null;
         let currentProfile = null;
+        let currentSoftware = null;
+        let currentVersion = null;
         let cmdMode = true;
         let lastLineCount = 0;
 
@@ -1210,7 +1230,7 @@
             </div>`;
             
             html += profiles.map(p => `
-                <div class="card server-card" onclick="launchServer('${p.name}', '${p.software || 'Not configured'}')">
+                <div class="card server-card" onclick="launchServer('${p.name}', '${p.software || 'Not configured'}', '${p.version || ''}')">
                     <div class="card-status">${p.software ? 'READY' : 'SETUP'}</div>
                     <div class="card-body">
                         <h3>${p.name}</h3>
@@ -1227,8 +1247,10 @@
         }
 
         // Launch server
-        function launchServer(name, software) {
+        function launchServer(name, software, version) {
             currentProfile = name;
+            currentSoftware = software;
+            currentVersion = version;
             document.getElementById('current-server-name').textContent = name;
             
             document.getElementById('profile-screen').classList.add('hidden');
@@ -1261,7 +1283,12 @@
             document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
             document.querySelector(`.menu-item[data-tab="${tabId}"]`).classList.add('active');
             
-            if (tabId === 'mods') loadInstalledMods();
+            if (tabId === 'mods') {
+                const version = currentVersion || '';
+                const profile = currentProfile || '';
+                const software = currentSoftware || '';
+                document.getElementById('mod-browser-frame').src = `mod-browser.html?version=${encodeURIComponent(version)}&profile=${encodeURIComponent(profile)}&software=${encodeURIComponent(software)}`;
+            }
             if (tabId === 'backup') loadBackupHistory();
             if (tabId === 'grief') loadGriefStatus();
             if (tabId === 'hosting') loadHostingStatus();
@@ -1280,6 +1307,7 @@
             const name = document.getElementById('new-profile-name').value.trim();
             const software = document.getElementById('new-profile-software').value;
             const version = document.getElementById('new-profile-version').value;
+            const build = document.getElementById('new-profile-build')?.value;
             const ram = document.getElementById('new-profile-ram').value;
             
             if (!name) return;
@@ -1294,6 +1322,53 @@
                     ram: ram
                 })
             });
+            
+            // Download server software after creating profile
+            if (software !== 'vanilla') {
+                try {
+                    let buildNum = build;
+                    // If no build specified, get latest for Paper
+                    if (!buildNum && software === 'paper') {
+                        const buildsRes = await fetch(`${API}/paper/${version}/builds`);
+                        const builds = await buildsRes.json();
+                        buildNum = builds[builds.length - 1];
+                    }
+                    
+                    const downloadRes = await fetch(
+                        `${API}/profile/${name}/download?software=${software}&version=${version}${buildNum ? `&build=${buildNum}` : ''}`, 
+                        { method: 'POST' }
+                    );
+                    const downloadData = await downloadRes.json();
+                    
+                    if (!downloadData.success) {
+                        alert('Profile created but download failed: ' + downloadData.message);
+                        closeModal();
+                        loadProfiles();
+                        return;
+                    }
+                } catch(e) {
+                    console.log('Auto-download skipped:', e);
+                }
+            } else {
+                // For vanilla
+                try {
+                    const downloadRes = await fetch(
+                        `${API}/profile/${name}/download?software=${software}&version=${version}`, 
+                        { method: 'POST' }
+                    );
+                    const downloadData = await downloadRes.json();
+                    
+                    if (!downloadData.success) {
+                        alert('Profile created but download failed: ' + downloadData.message);
+                        closeModal();
+                        loadProfiles();
+                        return;
+                    }
+                } catch(e) {
+                    console.log('Auto-download skipped:', e);
+                }
+            }
+            
             closeModal();
             loadProfiles();
         }
@@ -1408,10 +1483,21 @@
             lucide.createIcons();
             
             try {
-                await fetch(`${API}/start/${currentProfile}`, { method: 'POST' });
-                updateServerStatus('running');
-                connectConsole();
+                const res = await fetch(`${API}/start/${currentProfile}`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.success) {
+                    alert(data.message || 'Server started!');
+                    updateServerStatus('running');
+                    connectConsole();
+                } else {
+                    alert('Failed to start: ' + (data.message || 'Unknown error'));
+                    startBtn.disabled = false;
+                    startBtn.innerHTML = '<i data-lucide="play"></i> Start Server';
+                    lucide.createIcons();
+                }
             } catch (e) {
+                alert('Error starting server: ' + e);
                 startBtn.disabled = false;
                 startBtn.innerHTML = '<i data-lucide="play"></i> Start Server';
                 lucide.createIcons();
@@ -1538,11 +1624,46 @@
                 const data = await res.json();
                 if (data.running) {
                     updateServerStatus('running');
+                    loadServerStats();
+                    loadPlayers();
                 } else {
                     updateServerStatus('stopped');
                 }
             } catch (e) {
                 updateServerStatus('stopped');
+            }
+        }
+        
+        async function loadServerStats() {
+            try {
+                const res = await fetch(`${API}/server/stats`);
+                const stats = await res.json();
+                if (stats.running) {
+                    document.getElementById('cpu-usage').textContent = stats.cpu + '%';
+                    document.getElementById('cpu-bar').style.width = Math.min(stats.cpu, 100) + '%';
+                    document.getElementById('ram-usage').innerHTML = stats.memory.toFixed(1) + 'GB <small>/ 12GB</small>';
+                    document.getElementById('ram-bar').style.width = Math.min((stats.memory / 12) * 100, 100) + '%';
+                }
+            } catch (e) {}
+        }
+        
+        async function loadPlayers() {
+            try {
+                const res = await fetch(`${API}/server/stats`);
+                const stats = await res.json();
+                const list = document.getElementById('players-list');
+                if (stats.players && stats.players.length > 0) {
+                    list.innerHTML = stats.players.map(p => `
+                        <div class="player-card">
+                            <div class="player-avatar">${p.charAt(0).toUpperCase()}</div>
+                            <div class="player-name">${p}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<p style="color: var(--text-muted);">No players online</p>';
+                }
+            } catch (e) {
+                document.getElementById('players-list').innerHTML = '<p style="color: var(--text-muted);">No players online</p>';
             }
         }
 
