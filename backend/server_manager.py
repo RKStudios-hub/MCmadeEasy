@@ -34,15 +34,14 @@ class ServerManager:
         
         # Handle different server software
         if software in ["forge", "neoforge"]:
-            # Forge/NeoForge need special arguments
+            # Forge/NeoForge - ensure valid runnable JAR
             cmd = [
                 JAVA_PATH,
                 f"-Xmx{ram_max}",
                 f"-Xms{ram_min}",
                 "-jar",
                 "server.jar",
-                "nogui",
-                "--hint", "forge_server"
+                "nogui"
             ]
         else:
             cmd = [

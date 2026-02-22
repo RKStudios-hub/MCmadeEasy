@@ -2,9 +2,9 @@
     "ai": {
         "enabled": true,
         "mode": "auto-safe",
-        "api_key": "YOUR_GROQ_API_KEY_HERE",
+        "api_key": "",
         "model": "llama-3.1-8b-instant",
-        "api_key_secondary": "YOUR_GROQ_API_KEY_HERE",
+        "api_key_secondary": "",
         "model_secondary": "llama-3.1-8b-instant",
         "personality": "neutral",
         "ai_name": "Ava",

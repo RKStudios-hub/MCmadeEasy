@@ -32,7 +32,8 @@ class ResponseEngine:
         role = player.get("role", "player")
         trust = player.get("trust_score", 0.5)
         
-        if intent_result and intent_result.get("intent") != "none" and intent_result.get("intent") != "unknown":
+        # Only return command response if command was actually executed
+        if intent_result and intent_result.get("intent") not in ["none", "unknown", "error"] and intent_result.get("executed"):
             return self._generate_command_response(intent_result, player_name)
         
         return self._generate_chat_response(message, player_name, context)

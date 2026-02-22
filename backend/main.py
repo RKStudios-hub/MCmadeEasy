@@ -124,8 +124,6 @@ def download_server(name: str, software: str, version: str, build: str = None):
         return {"success": False, "message": "NeoForge requires manual download. Download from maven.neoforged.net and place server.jar in the server folder."}
     elif software == "fabric":
         return {"success": False, "message": "Fabric requires manual download. Download from fabricmc.net and place server.jar in the server folder."}
-    elif software == "forge":
-        return {"success": False, "message": "Forge requires manual download. Use Paper or Purpur instead."}
     elif software == "quilt":
         return {"success": False, "message": "Quilt requires manual download. Use Paper or Purpur instead."}
     elif software == "leaf":
@@ -136,6 +134,7 @@ def download_server(name: str, software: str, version: str, build: str = None):
         return {"success": False, "message": "Unsupported software"}
     
     if success:
+        print(f"[DOWNLOAD] Profile: {name}, Software: {software}, Version: {version}")
         update_profile(name, {"software": software, "version": version})
     
     return {"success": success, "message": msg}
@@ -187,6 +186,7 @@ def start(name: str):
     
     ram = profile.get("ram", "4G") if profile else "4G"
     software = profile.get("software", "paper")
+    print(f"[START] Profile: {name}, Software: {software}, RAM: {ram}")
     success, msg = server.start(profile_path, ram, software)
     return {"success": success, "message": msg}
 

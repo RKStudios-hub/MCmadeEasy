@@ -146,17 +146,46 @@ def get_latest_forge_version(version):
     return None
 
 def download_forge(version, full_version, path):
-    url = f"https://maven.minecraftforge.net/net/minecraftforge/forge/{full_version}/forge-{full_version}-universal.jar"
+    # Download the installer JAR
+    installer_url = f"https://maven.minecraftforge.net/net/minecraftforge/forge/{full_version}/forge-{full_version}-installer.jar"
     try:
-        resp = requests.get(url, timeout=180)
-        if resp.status_code == 200:
-            jar_path = os.path.join(path, "server.jar")
-            with open(jar_path, "wb") as f:
-                f.write(resp.content)
-            return True, "Downloaded"
+        # Download installer
+        installer_path = os.path.join(path, f"forge-installer-{full_version}.jar")
+        resp = requests.get(installer_url, timeout=180)
+        if resp.status_code != 200:
+            return False, "Failed to download Forge installer"
+        
+        with open(installer_path, "wb") as f:
+            f.write(resp.content)
+        
+        # Import JAVA_PATH from server_manager
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from server_manager import JAVA_PATH
+        
+        # Run the installer to install the server
+        import subprocess
+        result = subprocess.run(
+            [JAVA_PATH, "-jar", installer_path, "--installServer"],
+            cwd=path,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        
+        # Check if installation was successful - installer creates forge-*-universal.jar
+        import glob
+        universal_jars = glob.glob(os.path.join(path, "forge-*-universal.jar"))
+        if universal_jars:
+            # Copy to server.jar
+            import shutil
+            shutil.copy(universal_jars[0], os.path.join(path, "server.jar"))
+            return True, "Forge installed successfully"
+        
+        return True, "Forge installer downloaded. Please run the installer manually."
+        
     except Exception as e:
-        return False, str(e)
-    return False, "Download failed - Forge version may not be available"
+        return False, f"Error installing Forge: {str(e)}"
 
 def get_neoforge_versions():
     try:
