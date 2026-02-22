@@ -16,7 +16,7 @@ class ServerManager:
     def is_running(self):
         return self.process is not None and self.process.poll() is None
 
-    def start(self, profile_path, ram="4G"):
+    def start(self, profile_path, ram="4G", software="paper"):
         if self.is_running():
             return False, "Server already running"
 
@@ -29,12 +29,33 @@ class ServerManager:
             with open(eula_path, "w") as f:
                 f.write("eula=true\n")
 
-        # Parse RAM (e.g., "4G" -> "-Xmx4G -Xms2G")
         ram_max = ram
         ram_min = "1G" if ram in ["2G", "4G"] else "2G"
         
+        # Handle different server software
+        if software in ["forge", "neoforge"]:
+            # Forge/NeoForge need special arguments
+            cmd = [
+                JAVA_PATH,
+                f"-Xmx{ram_max}",
+                f"-Xms{ram_min}",
+                "-jar",
+                "server.jar",
+                "nogui",
+                "--hint", "forge_server"
+            ]
+        else:
+            cmd = [
+                JAVA_PATH,
+                f"-Xmx{ram_max}",
+                f"-Xms{ram_min}",
+                "-jar",
+                "server.jar",
+                "nogui"
+            ]
+        
         self.process = subprocess.Popen(
-            [JAVA_PATH, f"-Xmx{ram_max}", f"-Xms{ram_min}", "-jar", "server.jar", "nogui"],
+            cmd,
             cwd=profile_path,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,

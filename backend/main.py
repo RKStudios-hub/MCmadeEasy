@@ -186,7 +186,8 @@ def start(name: str):
         return {"success": False, "message": "No server.jar found. Please download server software first using the Server Setup tab."}
     
     ram = profile.get("ram", "4G") if profile else "4G"
-    success, msg = server.start(profile_path, ram)
+    software = profile.get("software", "paper")
+    success, msg = server.start(profile_path, ram, software)
     return {"success": success, "message": msg}
 
 @app.post("/stop")

@@ -157,16 +157,6 @@ def download_forge(version, full_version, path):
     except Exception as e:
         return False, str(e)
     return False, "Download failed - Forge version may not be available"
-    try:
-        resp = requests.get(url, timeout=180)
-        if resp.status_code == 200:
-            jar_path = os.path.join(path, "server.jar")
-            with open(jar_path, "wb") as f:
-                f.write(resp.content)
-            return True, "Downloaded"
-    except Exception as e:
-        return False, str(e)
-    return False, "Download failed - Forge version may not be available"
 
 def get_neoforge_versions():
     try:
