@@ -87,19 +87,21 @@ class MC_AI:
             commands = intent_result.get("commands", [])
             for cmd_intent in commands:
                 cmd = self._build_and_validate_command(cmd_intent, player_name)
-                if cmd:
+                if not cmd:
+                    continue
+                if isinstance(cmd, list):
+                    commands_executed.extend(cmd)
+                else:
                     commands_executed.append(cmd)
-                    # Execute each command
-                    if hasattr(self, 'executor') and self.executor:
-                        self.executor.execute(cmd, player_name)
         
         # Handle single command (original behavior) - skip scan intent
         elif should_execute and intent_result.get("intent") not in ["none", "unknown", "error", "scan"]:
             command_to_run = self._build_and_validate_command(intent_result, player_name)
             if command_to_run:
-                commands_executed.append(command_to_run)
-                if hasattr(self, 'executor') and self.executor:
-                    self.executor.execute(command_to_run, player_name)
+                if isinstance(command_to_run, list):
+                    commands_executed.extend(command_to_run)
+                else:
+                    commands_executed.append(command_to_run)
         
         # Pass execution status to response generator
         if commands_executed:
@@ -152,12 +154,13 @@ class MC_AI:
                 if can_execute:
                     success, msg = self.executor.execute(cmd, player_name, {
                         "intent": intent,
-                        "confidence": intent_result.get("confidence", 0)
+                        "confidence": intent_result.get("confidence", 0),
+                        "original_message": intent_result.get("raw", "")
                     })
                     if success:
                         commands_to_run.append(cmd)
                         print(f"[AI] Executed: {cmd}")
-            return commands_to_run[0] if commands_to_run else None
+            return commands_to_run if commands_to_run else None
         
         print(f"[AI] Built command: {command}")
         

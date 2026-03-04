@@ -7,17 +7,35 @@ class ModLoader:
     def __init__(self, server_manager):
         self.server_manager = server_manager
     
-    def get_mods_dir(self, profile):
+    def get_mods_dir(self, profile, software=None):
         base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         server_path = os.path.join(base, "servers", profile)
+        
+        # Determine folder based on software type
+        if software:
+            s = software.lower() if isinstance(software, str) else str(software)
+            if s in ['paper', 'spigot', 'bukkit', 'purpur']:
+                plugins_path = os.path.join(server_path, "plugins")
+                os.makedirs(plugins_path, exist_ok=True)
+                return plugins_path
+            elif s in ['fabric', 'forge', 'quilt', 'neoforge']:
+                mods_path = os.path.join(server_path, "mods")
+                os.makedirs(mods_path, exist_ok=True)
+                return mods_path
+        
+        # Fallback: check existing folders
         if os.path.exists(os.path.join(server_path, "plugins")):
             return os.path.join(server_path, "plugins")
         elif os.path.exists(os.path.join(server_path, "mods")):
             return os.path.join(server_path, "mods")
-        return os.path.join(server_path, "mods")
+        
+        # Default to mods
+        mods_path = os.path.join(server_path, "mods")
+        os.makedirs(mods_path, exist_ok=True)
+        return mods_path
     
-    def get_mods_list(self, profile):
-        mods_path = Path(self.get_mods_dir(profile))
+    def get_mods_list(self, profile, software=None):
+        mods_path = Path(self.get_mods_dir(profile, software))
         if not mods_path.exists():
             return []
         
@@ -31,8 +49,8 @@ class ModLoader:
             })
         return mods
     
-    def install_mod(self, profile, mod_url):
-        mods_path = self.get_mods_dir(profile)
+    def install_mod(self, profile, mod_url, software=None):
+        mods_path = self.get_mods_dir(profile, software)
         os.makedirs(mods_path, exist_ok=True)
         
         filename = mod_url.split("/")[-1]
@@ -48,8 +66,8 @@ class ModLoader:
             print(f"[ModLoader] Error: {e}")
             return {"success": False, "error": str(e)}
     
-    def remove_mod(self, profile, mod_name):
-        mods_path = Path(self.get_mods_dir(profile))
+    def remove_mod(self, profile, mod_name, software=None):
+        mods_path = Path(self.get_mods_dir(profile, software))
         for f in mods_path.glob(f"{mod_name}*.jar"):
             f.unlink()
             return {"success": True}

@@ -102,7 +102,7 @@ class ItemResolver:
         if not user_text:
             return None
         
-        user_text_lower = user_text.lower().strip()
+        user_text_lower = user_text.lower().strip().replace("netharite", "netherite")
         
         # Check cache
         if user_text_lower in self._item_cache:
@@ -144,6 +144,7 @@ Return ONLY the item ID (e.g., "golden_apple"), nothing else. If unsure, return 
             if response:
                 # Clean up response
                 item = response.strip().strip('"').strip("'").lower()
+                item = item.replace("netharite", "netherite")
                 # Validate it's a reasonable item name
                 if item and len(item) > 1:
                     return item.replace(" ", "_")
@@ -169,6 +170,7 @@ Supported intents:
 - summon: Spawn mobs (entity: mob name, amount: number)
 - summon_multi: Spawn multiple different mobs at once
 - teleport: Teleport (destination: player/location/coordinates)
+- locate: Find nearest structure without teleporting (structure: name)
 - gamemode: Change mode (mode: creative/survival/adventure/spectator)
 - heal: Heal player
 - god_mode: God mode (enable: true/false)
@@ -198,6 +200,8 @@ Examples:
 "give me 1 diamond and 4 obsidian" → {"intent": "give_multi", "parameters": {"items": [{"item": "diamond", "amount": 1}, {"item": "obsidian", "amount": 4}]}, "confidence": 0.95}
 "give me 64 dirt and tp me to village" → [{"intent": "give_item", "parameters": {"item": "dirt", "amount": 64}}, {"intent": "teleport", "parameters": {"destination": "village"}}]
 "spawn 5 zombies and give me a diamond sword" → [{"intent": "summon", "parameters": {"entity": "zombie", "amount": 5}}, {"intent": "give_item", "parameters": {"item": "diamond_sword", "amount": 1}}]
+
+"where is the nearest village" -> {"intent": "locate", "parameters": {"structure": "village"}}
 
 Return JSON only:"""
 
@@ -316,7 +320,9 @@ class IntentEngine:
         return self._parse_with_ai(message, player_name, context or {})
     
     def _resolve_pronouns(self, message, player_name, last_target):
-        message = message.replace("me", player_name)
+        # Avoid breaking teleport-style commands by injecting player name into destination
+        if not re.search(r"\b(tp|teleport|warp|take me to|go to|travel to|find me the)\b", message):
+            message = message.replace("me", player_name)
         message = message.replace("my", f"{player_name}'s")
         message = message.replace("i ", f"{player_name} ")
         
@@ -344,6 +350,33 @@ class IntentEngine:
                     "confidence": 0.9,
                     "source": "pattern"
                 }
+        
+        # Multi-item give patterns (e.g., "give me a pickaxe and a sword")
+        if re.search(r"\b(give|gimme)\b", message):
+            cleaned = re.sub(r"^(give me|give|gimme)\s+", "", message, flags=re.IGNORECASE).strip()
+            if " and " in cleaned or "," in cleaned:
+                parts = re.split(r"\s+and\s+|,\s*", cleaned)
+                items = []
+                for part in parts:
+                    part = part.strip()
+                    if not part:
+                        continue
+                    part = re.sub(r"^(a|an|the|some)\s+", "", part, flags=re.IGNORECASE).strip()
+                    amount = 1
+                    amt_match = re.match(r"(\d+)\s+(.+)", part)
+                    if amt_match:
+                        amount = min(int(amt_match.group(1)), 64)
+                        part = amt_match.group(2).strip()
+                    item = item_resolver.resolve(part)
+                    if item:
+                        items.append({"item": item, "amount": amount})
+                if len(items) >= 2:
+                    return {
+                        "intent": "give_multi",
+                        "parameters": {"items": items, "target": "@a"},
+                        "confidence": 0.9,
+                        "source": "pattern"
+                    }
         
         # For give/spawn requests, try AI resolver for better item matching
         give_keywords = ["give", "spawn", "want", "need", "get", "receive", "have", "can i get", "i want", "i need", "gimme", "summon", "create"]
@@ -390,6 +423,8 @@ class IntentEngine:
         tp_match = re.search(r"(tp|teleport|warp)\s+(me\s+)?(to\s+)?(.+?)(?:\s*$|\s+please)", message)
         if tp_match:
             destination = tp_match.group(4).strip() if tp_match.group(4) else None
+            if destination:
+                destination = self._clean_destination(destination, player_name)
             return {
                 "intent": "teleport",
                 "parameters": {"target": "@a", "destination": destination} if destination else {"target": "@a"},
@@ -401,12 +436,24 @@ class IntentEngine:
         if re.search(r"(go\s+to|travel\s+to|take\s+me\s+to|find\s+me\s+the|take me to)", message):
             dest_match = re.search(r"(go\s+to|travel\s+to|take\s+me\s+to|find\s+me\s+the)\s+(.+?)(?:\s*$|\s+please)", message)
             if dest_match:
+                destination = self._clean_destination(dest_match.group(2).strip(), player_name)
                 return {
                     "intent": "teleport",
-                    "parameters": {"target": "@a", "destination": dest_match.group(2).strip()},
+                    "parameters": {"target": "@a", "destination": destination},
                     "confidence": 0.8,
                     "source": "pattern"
                 }
+        
+        # Locate requests (where is/nearest/closest)
+        if re.search(r"\b(where is|nearest|closest|locate)\b", message):
+            for struct_name in STRUCTURE_MAP.keys():
+                if struct_name in message:
+                    return {
+                        "intent": "locate",
+                        "parameters": {"structure": struct_name},
+                        "confidence": 0.9,
+                        "source": "pattern"
+                    }
         
         # Structure names
         for struct_name, struct_id in STRUCTURE_MAP.items():
@@ -419,6 +466,15 @@ class IntentEngine:
                 }
         
         return None
+    
+    def _clean_destination(self, destination, player_name):
+        if not destination:
+            return destination
+        dest = destination.strip()
+        dest = re.sub(rf"^{re.escape(player_name)}\s+", "", dest, flags=re.IGNORECASE)
+        dest = re.sub(rf"\s+{re.escape(player_name)}$", "", dest, flags=re.IGNORECASE)
+        dest = re.sub(r"^to\s+", "", dest, flags=re.IGNORECASE)
+        return dest.strip()
     
     def _parse_with_ai(self, message, player_name, context):
         player = self.memory.get_player(player_name)

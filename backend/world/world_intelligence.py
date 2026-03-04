@@ -213,11 +213,12 @@ class WorldIntelligence:
             # Use vision AI that sees actual images
             result = terrain_vision.ask_terrain_ai_vision(player_name, x, z, question, world)
             print(f"[WorldIntelligence] Vision result: {result[:100] if result else 'None'}")
-            if result and "not configured" not in result.lower() and "could not download" not in result.lower():
+            if result:
+                lowered = result.lower()
+                if any(bad in lowered for bad in ["not configured", "could not download", "error analyzing terrain", "model_decommissioned", "decommissioned"]):
+                    return self._basic_terrain_description(player_name, x, z)
                 return result
-            else:
-                # Fallback if vision fails
-                return self._basic_terrain_description(player_name, x, z)
+            return self._basic_terrain_description(player_name, x, z)
         except Exception as e:
             print(f"[WorldIntelligence] Terrain analysis error: {e}")
             return self._basic_terrain_description(player_name, x, z)

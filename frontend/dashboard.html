@@ -674,14 +674,14 @@
         /* Players */
         .players-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 15px;
             padding: 20px;
         }
         
         .player-card {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 12px;
             padding: 15px;
             background: var(--card);
@@ -709,6 +709,34 @@
         
         .player-name {
             font-weight: 500;
+        }
+
+        .player-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .player-meta {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .inventory-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .inventory-item {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 0.75rem;
+            white-space: nowrap;
         }
 
         .player-item {
@@ -775,9 +803,298 @@
             margin-top: 20px;
         }
 
-        .modal-buttons .btn {
+.modal-buttons .btn {
             flex: 1;
             justify-content: center;
+        }
+
+        /* Players Tab */
+        .players-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .players-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .players-stats {
+            display: flex;
+            gap: 16px;
+        }
+
+        .players-stats .stat {
+            padding: 8px 16px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .players-stats .stat span {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .players-section {
+            margin-bottom: 24px;
+        }
+
+        .players-section h3 {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .player-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 12px;
+        }
+
+        .player-entry {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .player-entry:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.2);
+        }
+
+        .player-entry.online {
+            border-left: 3px solid var(--success);
+        }
+
+        .player-entry.offline {
+            border-left: 3px solid var(--text-muted);
+            opacity: 0.7;
+        }
+
+        .player-head {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            background: var(--bg);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .player-head img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .player-entry-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .player-entry-name {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .online-badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .player-entry-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .player-entry-meta .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .player-entry-stats {
+            display: flex;
+            gap: 12px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .player-entry-stats .stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .player-entry-stats .stat.health { color: #ef4444; }
+        .player-entry-stats .stat.hunger { color: #f97316; }
+        .player-entry-stats .stat.xp { color: #8b5cf6; }
+
+        .player-entry-coords {
+            font-family: 'Consolas', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: rgba(0,0,0,0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        /* Inventory Modal */
+        .inventory-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .inventory-modal.hidden {
+            display: none;
+        }
+
+        .inventory-content {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .inventory-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .inventory-header .player-head {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+        }
+
+        .inventory-header-info h3 {
+            font-size: 1.3rem;
+            margin-bottom: 4px;
+        }
+
+        .inventory-header-info .player-status {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 16px;
+        }
+
+        .inventory-header-info .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 4px;
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .inventory-slot {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .inventory-slot:hover {
+            border-color: var(--accent);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .inventory-slot img {
+            width: 80%;
+            height: 80%;
+            object-fit: contain;
+            image-rendering: pixelated;
+        }
+
+        .inventory-slot .count {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 0.65rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+        }
+
+        .inventory-slot .item-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.95);
+            border: 1px solid var(--accent);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            z-index: 10;
+            display: none;
+        }
+
+        .inventory-slot:hover .item-tooltip {
+            display: block;
+        }
+
+        .inventory-close {
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .empty-inventory {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
         }
     </style>
 </head>
@@ -824,7 +1141,7 @@
                 <button class="menu-item" data-tab="map" onclick="switchTab('map')"><i data-lucide="map"></i> Dynmap</button>
                 <button class="menu-item" data-tab="console" onclick="switchTab('console')"><i data-lucide="terminal"></i> Console</button>
                 <button class="menu-item" data-tab="players" onclick="switchTab('players')"><i data-lucide="users"></i> Players</button>
-                <button class="menu-item" data-tab="mods" onclick="switchTab('mods')"><i data-lucide="puzzle"></i> Mods</button>
+                <button class="menu-item" data-tab="mods" onclick="switchTab('mods')"><i data-lucide="puzzle"></i> <span id="mods-menu-text">Mods</span></button>
                 <button class="menu-item" data-tab="backup" onclick="switchTab('backup')"><i data-lucide="cloud"></i> Backups</button>
                 <button class="menu-item" data-tab="grief" onclick="switchTab('grief')"><i data-lucide="shield"></i> Protection</button>
                 <button class="menu-item" data-tab="hosting" onclick="switchTab('hosting')"><i data-lucide="globe"></i> Hosting</button>
@@ -850,8 +1167,15 @@
                     </div>
                     <div class="stat-card">
                         <label>Memory</label>
-                        <h2 id="ram-usage">0GB <small>/ 12GB</small></h2>
+                        <h2 id="ram-usage">0GB <small>/ 4GB</small></h2>
                         <div class="progress"><div class="bar" id="ram-bar" style="width: 0%"></div></div>
+                    </div>
+                </div>
+
+                <div class="glass" style="margin-top: 20px;">
+                    <h3 style="margin-bottom: 12px;">Recent Activity</h3>
+                    <div id="recent-activity" style="max-height: 200px; overflow-y: auto;">
+                        <p style="color: var(--text-muted);">No recent activity</p>
                     </div>
                 </div>
 
@@ -985,14 +1309,70 @@
             <div id="tab-ai" class="tab-content hidden">
                 <div class="settings-grid">
                     <div class="settings-group glass">
-                        <h3>Engine Configuration</h3>
+                        <h3>API Keys & Provider</h3>
+                        
                         <div class="input-row">
-                            <label>Model Provider</label>
-                            <select id="ai-model">
-                                <option value="llama-3.1-8b-instant">Groq (Llama 3.1 8B)</option>
-                                <option value="llama-3.3-70b-versatile">Groq (Llama 3.3 70B)</option>
+                            <label>Primary Provider</label>
+                            <select id="ai-provider" onchange="updateProviderModels()">
+                                <option value="groq">Groq</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic (Claude)</option>
+                                <option value="google">Google (Gemini)</option>
+                                <option value="local">Local LLM (Ollama/LM Studio)</option>
+                                <option value="azure">Azure OpenAI</option>
                             </select>
                         </div>
+                        
+                        <div class="input-row">
+                            <label>Groq API Key</label>
+                            <input type="password" id="api-key-groq" placeholder="gsk_...">
+                        </div>
+                        
+                        <div class="input-row">
+                            <label>OpenAI API Key</label>
+                            <input type="password" id="api-key-openai" placeholder="sk-...">
+                        </div>
+                        
+                        <div class="input-row">
+                            <label>Anthropic API Key</label>
+                            <input type="password" id="api-key-anthropic" placeholder="sk-ant-...">
+                        </div>
+                        
+                        <div class="input-row">
+                            <label>Google API Key</label>
+                            <input type="password" id="api-key-google" placeholder="AIza...">
+                        </div>
+                        
+                        <div class="input-row">
+                            <label>Azure Endpoint</label>
+                            <input type="text" id="azure-endpoint" placeholder="https://...openai.azure.com">
+                        </div>
+                        
+                        <div class="input-row">
+                            <label>Azure Deployment</label>
+                            <input type="text" id="azure-deployment" placeholder="gpt-4">
+                        </div>
+                        
+                        <div class="input-row">
+                            <label>Azure API Key</label>
+                            <input type="password" id="api-key-azure" placeholder="Azure API Key">
+                        </div>
+                        
+                        <div class="input-row">
+                            <label>Local LLM URL</label>
+                            <input type="text" id="local-url" placeholder="http://localhost:11434">
+                        </div>
+                        
+                        <div class="input-row">
+                            <label>Model</label>
+                            <select id="ai-model"></select>
+                        </div>
+                        
+                        <div class="input-row">
+                            <label>AI Name</label>
+                            <input type="text" id="ai-name" placeholder="Ava">
+                        </div>
+                        
                         <div class="input-row">
                             <label>AI Mode</label>
                             <select id="ai-mode">
@@ -1002,7 +1382,38 @@
                                 <option value="auto-admin">Auto-Admin</option>
                             </select>
                         </div>
+                        
                         <button class="btn btn-primary" onclick="saveAISettings()"><i data-lucide="save"></i> Save Settings</button>
+                    </div>
+                    <div class="settings-group glass">
+                        <h3>Terrain AI (Image Analyzer)</h3>
+                        
+                        <div class="input-row">
+                            <label>Provider</label>
+                            <select id="vision-provider" onchange="updateVisionProviderModels(true)">
+                                <option value="groq">Groq</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic (Claude)</option>
+                                <option value="google">Google (Gemini)</option>
+                                <option value="local">Local LLM (Ollama/LM Studio)</option>
+                                <option value="azure">Azure OpenAI</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-row">
+                            <label>API Key (optional)</label>
+                            <input type="password" id="vision-api-key" placeholder="Leave blank to use provider key">
+                        </div>
+                        
+                        <div class="input-row">
+                            <label>Model</label>
+                            <select id="vision-model"></select>
+                        </div>
+                        
+                        <div class="input-row">
+                            <label>Model (Custom)</label>
+                            <input type="text" id="vision-model-custom" placeholder="override model id">
+                        </div>
                     </div>
                     <div class="settings-group glass">
                         <h3>Divine Directive (System Prompt)</h3>
@@ -1047,10 +1458,32 @@
                 </div>
             </div>
 
-            <!-- Players Tab -->
+<!-- Players Tab -->
             <div id="tab-players" class="tab-content hidden">
-                <div class="players-list" id="players-list">
-                    <p style="color: var(--text-muted);">No players online</p>
+                <div class="players-header">
+                    <h2>Players</h2>
+                    <div class="players-stats">
+                        <div class="stat">Online: <span id="players-online-count">0</span></div>
+                        <div class="stat">Total: <span id="players-total-count">0</span></div>
+                    </div>
+                </div>
+                <div id="players-container">
+                    <p style="color: var(--text-muted);">Loading players...</p>
+                </div>
+            </div>
+
+            <!-- Inventory Modal -->
+            <div id="inventory-modal" class="inventory-modal hidden">
+                <div class="inventory-content">
+                    <div class="inventory-header">
+                        <div class="player-head" id="modal-player-head"></div>
+                        <div class="inventory-header-info">
+                            <h3 id="modal-player-name">Player Name</h3>
+                            <div class="player-status" id="modal-player-status"></div>
+                        </div>
+                    </div>
+                    <div class="inventory-grid" id="modal-inventory-grid"></div>
+                    <button class="btn btn-secondary inventory-close" onclick="closeInventoryModal()">Close</button>
                 </div>
             </div>
 
@@ -1214,6 +1647,210 @@
         let currentVersion = null;
         let cmdMode = true;
         let lastLineCount = 0;
+        let statsIntervalId = null;
+        let activityIntervalId = null;
+        let playersIntervalId = null;
+        let aiFormSnapshot = null;
+
+            const PROVIDER_MODELS = {
+                groq: ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "llama-3.2-90b-vision-preview", "meta-llama/llama-4-scout-17b-16e-instruct", "mixtral-8x7b-32768"],
+                openai: ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
+                anthropic: ["claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229"],
+                google: ["gemini-1.5-flash", "gemini-1.5-pro"],
+                azure: ["gpt-4", "gpt-35-turbo"],
+                local: ["llama3", "llama2", "mistral", "codellama", "phi3", "gemma"]
+            };
+
+            function updateProviderModels() {
+                const provider = document.getElementById('ai-provider').value;
+                const modelSelect = document.getElementById('ai-model');
+                modelSelect.innerHTML = '';
+            
+            const models = PROVIDER_MODELS[provider] || [];
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model;
+                    option.textContent = model;
+                    modelSelect.appendChild(option);
+                });
+            }
+            
+            function updateVisionProviderModels(forceSelectFirst = false) {
+                const provider = document.getElementById('vision-provider').value;
+                const modelSelect = document.getElementById('vision-model');
+                modelSelect.innerHTML = '';
+                
+                const models = PROVIDER_MODELS[provider] || [];
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model;
+                    option.textContent = model;
+                    modelSelect.appendChild(option);
+                });
+                
+                if (forceSelectFirst && models.length > 0) {
+                    modelSelect.value = models[0];
+                }
+            }
+
+        async function loadConfig() {
+            try {
+                const res = await fetch(`${API}/config`);
+                const config = await res.json();
+                
+                if (config.ai) {
+                    const setValue = (id, val) => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = val;
+                    };
+                    const setChecked = (id, val) => {
+                        const el = document.getElementById(id);
+                        if (el) el.checked = val;
+                    };
+                    
+                    setValue('api-key-groq', config.ai.providers?.groq?.api_key || '');
+                    setValue('api-key-openai', config.ai.providers?.openai?.api_key || '');
+                    setValue('api-key-anthropic', config.ai.providers?.anthropic?.api_key || '');
+                    setValue('api-key-google', config.ai.providers?.google?.api_key || '');
+                    setValue('api-key-azure', config.ai.providers?.azure?.api_key || '');
+                    setValue('azure-endpoint', config.ai.providers?.azure?.endpoint || '');
+                    setValue('azure-deployment', config.ai.providers?.azure?.deployment || '');
+                    setValue('local-url', config.ai.providers?.local?.url || 'http://localhost:11434');
+                    setValue('ai-provider', config.ai.provider || 'groq');
+                    setValue('ai-model', config.ai.model || 'llama-3.1-8b-instant');
+                    setValue('ai-mode', config.ai.mode || 'auto-safe');
+                    setValue('ai-name', config.ai.ai_name || 'Ava');
+                    setValue('ai-prompt', config.ai.system_prompt || '');
+                    setValue('vision-provider', config.ai.vision_provider || config.ai.provider || 'groq');
+                    setValue('vision-api-key', config.ai.vision_api_key || '');
+                    updateProviderModels();
+                    updateVisionProviderModels(true);
+                    const visionModel = config.ai.vision_model || '';
+                    const visionProviderKey = (config.ai.vision_provider || config.ai.provider || 'groq');
+                    if (visionModel && PROVIDER_MODELS[visionProviderKey]?.includes(visionModel)) {
+                        setValue('vision-model', visionModel);
+                        setValue('vision-model-custom', '');
+                    } else {
+                        setValue('vision-model-custom', visionModel);
+                    }
+                    
+                    aiFormSnapshot = {
+                        provider: config.ai.provider || 'groq',
+                        model: config.ai.model || 'llama-3.1-8b-instant',
+                        mode: config.ai.mode || 'auto-safe',
+                        ai_name: config.ai.ai_name || 'Ava',
+                        system_prompt: config.ai.system_prompt || '',
+                        vision_provider: config.ai.vision_provider || config.ai.provider || 'groq',
+                        vision_model: config.ai.vision_model || '',
+                        vision_api_key: config.ai.vision_api_key || '',
+                        api_keys: {
+                            groq: config.ai.providers?.groq?.api_key || '',
+                            openai: config.ai.providers?.openai?.api_key || '',
+                            anthropic: config.ai.providers?.anthropic?.api_key || '',
+                            google: config.ai.providers?.google?.api_key || '',
+                            azure: config.ai.providers?.azure?.api_key || '',
+                            azure_endpoint: config.ai.providers?.azure?.endpoint || '',
+                            azure_deployment: config.ai.providers?.azure?.deployment || '',
+                            local_url: config.ai.providers?.local?.url || 'http://localhost:11434'
+                        }
+                    };
+                }
+                if (config.server) {
+                    setValue('ram-setting', config.server.default_ram || '1G');
+                }
+            } catch (e) {
+                console.log('Config loading failed', e);
+            }
+        }
+
+        async function saveConfig() {
+            try {
+                const res = await fetch(`${API}/config`);
+                const config = await res.json();
+                
+                if (!config.ai) config.ai = {};
+                if (!config.server) config.server = {};
+                
+                const getValue = (id, def = '') => {
+                    const el = document.getElementById(id);
+                    return el ? el.value : def;
+                };
+                
+                const next = {
+                    provider: getValue('ai-provider', 'groq'),
+                    model: getValue('ai-model', 'llama-3.1-8b-instant'),
+                    mode: getValue('ai-mode', 'auto-safe'),
+                    ai_name: getValue('ai-name', 'Ava'),
+                    system_prompt: getValue('ai-prompt', ''),
+                    vision_provider: getValue('vision-provider', config.ai.provider || 'groq'),
+                    vision_model: (getValue('vision-model-custom', '').trim() || getValue('vision-model', '')),
+                    vision_api_key: getValue('vision-api-key', ''),
+                    api_keys: {
+                        groq: getValue('api-key-groq'),
+                        openai: getValue('api-key-openai'),
+                        anthropic: getValue('api-key-anthropic'),
+                        google: getValue('api-key-google'),
+                        azure: getValue('api-key-azure'),
+                        azure_endpoint: getValue('azure-endpoint'),
+                        azure_deployment: getValue('azure-deployment'),
+                        local_url: getValue('local-url', 'http://localhost:11434')
+                    }
+                };
+                
+                const changed = [];
+                const prev = aiFormSnapshot || {};
+                if (next.provider !== prev.provider) { config.ai.provider = next.provider; changed.push('provider'); }
+                if (next.model !== prev.model) { config.ai.model = next.model; changed.push('model'); }
+                if (next.mode !== prev.mode) { config.ai.mode = next.mode; changed.push('mode'); }
+                if (next.ai_name !== prev.ai_name) { config.ai.ai_name = next.ai_name; changed.push('ai_name'); }
+                if (next.system_prompt !== prev.system_prompt) { config.ai.system_prompt = next.system_prompt; changed.push('system_prompt'); }
+                if (next.vision_provider !== prev.vision_provider) { config.ai.vision_provider = next.vision_provider; changed.push('vision_provider'); }
+                if (next.vision_model !== prev.vision_model) { config.ai.vision_model = next.vision_model; changed.push('vision_model'); }
+                if (next.vision_api_key !== prev.vision_api_key) { config.ai.vision_api_key = next.vision_api_key; changed.push('vision_api_key'); }
+                
+                if (!config.ai.providers) config.ai.providers = {};
+                
+                const ensureProvider = (key) => { if (!config.ai.providers[key]) config.ai.providers[key] = {}; };
+                
+                if (next.api_keys.groq !== prev.api_keys?.groq) { ensureProvider('groq'); config.ai.providers.groq.api_key = next.api_keys.groq; changed.push('groq_api_key'); }
+                if (next.api_keys.openai !== prev.api_keys?.openai) { ensureProvider('openai'); config.ai.providers.openai.api_key = next.api_keys.openai; changed.push('openai_api_key'); }
+                if (next.api_keys.anthropic !== prev.api_keys?.anthropic) { ensureProvider('anthropic'); config.ai.providers.anthropic.api_key = next.api_keys.anthropic; changed.push('anthropic_api_key'); }
+                if (next.api_keys.google !== prev.api_keys?.google) { ensureProvider('google'); config.ai.providers.google.api_key = next.api_keys.google; changed.push('google_api_key'); }
+                if (next.api_keys.azure !== prev.api_keys?.azure) { ensureProvider('azure'); config.ai.providers.azure.api_key = next.api_keys.azure; changed.push('azure_api_key'); }
+                if (next.api_keys.azure_endpoint !== prev.api_keys?.azure_endpoint) { ensureProvider('azure'); config.ai.providers.azure.endpoint = next.api_keys.azure_endpoint; changed.push('azure_endpoint'); }
+                if (next.api_keys.azure_deployment !== prev.api_keys?.azure_deployment) { ensureProvider('azure'); config.ai.providers.azure.deployment = next.api_keys.azure_deployment; changed.push('azure_deployment'); }
+                if (next.api_keys.local_url !== prev.api_keys?.local_url) { ensureProvider('local'); config.ai.providers.local.url = next.api_keys.local_url; changed.push('local_url'); }
+                
+                if (changed.length === 0) {
+                    alert('No changes to save.');
+                    return;
+                }
+                
+                console.log('Saving config:', JSON.stringify(config, null, 2));
+                
+                const saveRes = await fetch(`${API}/config`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
+                });
+                console.log('Save response:', saveRes.status);
+                alert('Settings saved!');
+                aiFormSnapshot = {
+                    provider: next.provider,
+                    model: next.model,
+                    mode: next.mode,
+                    ai_name: next.ai_name,
+                    system_prompt: next.system_prompt,
+                    vision_provider: next.vision_provider,
+                    vision_model: next.vision_model,
+                    vision_api_key: next.vision_api_key,
+                    api_keys: { ...next.api_keys }
+                };
+            } catch (e) {
+                console.log('Config saving failed', e);
+                alert('Failed to save settings');
+            }
+        }
 
         // Initialize icons
         lucide.createIcons();
@@ -1253,10 +1890,14 @@
             currentVersion = version;
             document.getElementById('current-server-name').textContent = name;
             
+            const isPluginBased = ['paper', 'spigot', 'purpur', 'bukkit'].includes(software.toLowerCase());
+            document.getElementById('mods-menu-text').textContent = isPluginBased ? 'Plugins' : 'Mods';
+            
             document.getElementById('profile-screen').classList.add('hidden');
             setTimeout(() => {
                 document.getElementById('control-screen').classList.remove('hidden');
                 checkServerStatus();
+                startLiveStats();
                 if (ws) {
                     ws.close();
                     ws = null;
@@ -1272,6 +1913,7 @@
             document.getElementById('control-screen').classList.add('hidden');
             document.getElementById('profile-screen').classList.remove('hidden');
             document.getElementById('current-server-name').textContent = "Select Universe";
+            stopLiveStats();
             loadProfiles();
         }
 
@@ -1283,15 +1925,41 @@
             document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
             document.querySelector(`.menu-item[data-tab="${tabId}"]`).classList.add('active');
             
+            if (tabId === 'overview') {
+                loadServerStats();
+                loadActivity();
+                if (currentProfile) {
+                    loadServerProperties();
+                }
+            }
+            if (tabId === 'ai') {
+                loadConfig();
+            }
+            if (tabId === 'map') {
+                const iframe = document.querySelector('#tab-map iframe');
+                if (iframe) {
+                    iframe.src = iframe.src;
+                }
+            }
             if (tabId === 'mods') {
                 const version = currentVersion || '';
                 const profile = currentProfile || '';
                 const software = currentSoftware || '';
-                document.getElementById('mod-browser-frame').src = `mod-browser.html?version=${encodeURIComponent(version)}&profile=${encodeURIComponent(profile)}&software=${encodeURIComponent(software)}`;
+                const isPluginBased = ['paper', 'spigot', 'purpur', 'bukkit'].includes((software || '').toLowerCase());
+                const browserFile = isPluginBased ? 'plugin-browser.html' : 'mod-browser.html';
+                document.getElementById('mod-browser-frame').src = `${browserFile}?version=${encodeURIComponent(version)}&profile=${encodeURIComponent(profile)}&software=${encodeURIComponent(software)}`;
             }
             if (tabId === 'backup') loadBackupHistory();
             if (tabId === 'grief') loadGriefStatus();
             if (tabId === 'hosting') loadHostingStatus();
+            if (tabId === 'players') {
+                loadPlayers();
+                if (playersIntervalId) clearInterval(playersIntervalId);
+                playersIntervalId = setInterval(loadPlayers, 5000);
+            } else if (playersIntervalId) {
+                clearInterval(playersIntervalId);
+                playersIntervalId = null;
+            }
         }
 
         // Modal
@@ -1543,6 +2211,7 @@
 
         // Server Properties
         async function loadServerProperties() {
+            if (!currentProfile) return;
             try {
                 const res = await fetch(`${API}/server/properties/${currentProfile}`);
                 const props = await res.json();
@@ -1551,17 +2220,27 @@
                     document.getElementById('prop-motd').value = props['motd'] || '';
                     document.getElementById('prop-gamemode').value = props['gamemode'] || 'survival';
                     document.getElementById('prop-difficulty').value = props['difficulty'] || 'normal';
-                    document.getElementById('prop-view-distance').value = props['view-distance'] || 10;
-                    document.getElementById('prop-max-players').value = props['max-players'] || 20;
-                    document.getElementById('prop-pvp').checked = props['pvp'] !== false;
-                    document.getElementById('prop-allow-flight').checked = props['allow-flight'] !== false;
-                    document.getElementById('prop-allow-nether').checked = props['allow-nether'] !== false;
-                    document.getElementById('prop-online-mode').checked = props['online-mode'] !== false;
-                    document.getElementById('prop-structures').checked = props['generate-structures'] !== false;
-                    document.getElementById('prop-spawn-protection').checked = props['spawn-protection'] > 0;
+                    document.getElementById('prop-view-distance').value = parseInt(props['view-distance']) || 10;
+                    document.getElementById('prop-max-players').value = parseInt(props['max-players']) || 20;
+                    document.getElementById('prop-pvp').checked = props['pvp'] === 'true';
+                    document.getElementById('prop-allow-flight').checked = props['allow-flight'] === 'true';
+                    document.getElementById('prop-allow-nether').checked = props['allow-nether'] === 'true';
+                    document.getElementById('prop-online-mode').checked = props['online-mode'] === 'true';
+                    document.getElementById('prop-structures').checked = props['generate-structures'] === 'true';
+                    document.getElementById('prop-spawn-protection').checked = parseInt(props['spawn-protection']) > 0;
+                    document.getElementById('prop-seed').value = props['level-seed'] || '';
+                    document.getElementById('prop-level-type').value = props['level-type'] || 'normal';
+                    document.getElementById('prop-simulation-distance').value = parseInt(props['simulation-distance']) || 10;
+                    document.getElementById('prop-max-world-size').value = parseInt(props['max-world-size']) || 29999984;
+                    document.getElementById('prop-idle-timeout').value = parseInt(props['player-idle-timeout']) || 0;
+                    document.getElementById('prop-hardcore').checked = props['hardcore'] === 'true';
+                    document.getElementById('prop-force-gamemode').checked = props['force-gamemode'] === 'true';
+                    document.getElementById('prop-spawn-animals').checked = props['spawn-animals'] === 'true';
+                    document.getElementById('prop-spawn-monsters').checked = props['spawn-monsters'] === 'true';
+                    document.getElementById('prop-spawn-npcs').checked = props['spawn-npcs'] === 'true';
                 }
             } catch (e) {
-                console.log('Could not load server properties');
+                console.log('Could not load server properties', e);
             }
         }
 
@@ -1570,14 +2249,14 @@
                 'motd': document.getElementById('prop-motd').value,
                 'gamemode': document.getElementById('prop-gamemode').value,
                 'difficulty': document.getElementById('prop-difficulty').value,
-                'view-distance': parseInt(document.getElementById('prop-view-distance').value),
-                'max-players': parseInt(document.getElementById('prop-max-players').value),
-                'pvp': document.getElementById('prop-pvp').checked,
-                'allow-flight': document.getElementById('prop-allow-flight').checked,
-                'allow-nether': document.getElementById('prop-allow-nether').checked,
-                'online-mode': document.getElementById('prop-online-mode').checked,
-                'generate-structures': document.getElementById('prop-structures').checked,
-                'spawn-protection': document.getElementById('prop-spawn-protection').checked ? 16 : 0,
+                'view-distance': document.getElementById('prop-view-distance').value,
+                'max-players': document.getElementById('prop-max-players').value,
+                'pvp': document.getElementById('prop-pvp').checked.toString(),
+                'allow-flight': document.getElementById('prop-allow-flight').checked.toString(),
+                'allow-nether': document.getElementById('prop-allow-nether').checked.toString(),
+                'online-mode': document.getElementById('prop-online-mode').checked.toString(),
+                'generate-structures': document.getElementById('prop-structures').checked.toString(),
+                'spawn-protection': document.getElementById('prop-spawn-protection').checked ? '16' : '0',
             };
             
             try {
@@ -1596,14 +2275,14 @@
             const props = {
                 'level-seed': document.getElementById('prop-seed').value,
                 'level-type': document.getElementById('prop-level-type').value,
-                'simulation-distance': parseInt(document.getElementById('prop-simulation-distance').value),
-                'max-world-size': parseInt(document.getElementById('prop-max-world-size').value),
-                'player-idle-timeout': parseInt(document.getElementById('prop-idle-timeout').value),
-                'hardcore': document.getElementById('prop-hardcore').checked,
-                'force-gamemode': document.getElementById('prop-force-gamemode').checked,
-                'spawn-animals': document.getElementById('prop-spawn-animals').checked,
-                'spawn-monsters': document.getElementById('prop-spawn-monsters').checked,
-                'spawn-npcs': document.getElementById('prop-spawn-npcs').checked,
+                'simulation-distance': document.getElementById('prop-simulation-distance').value,
+                'max-world-size': document.getElementById('prop-max-world-size').value,
+                'player-idle-timeout': document.getElementById('prop-idle-timeout').value,
+                'hardcore': document.getElementById('prop-hardcore').checked.toString(),
+                'force-gamemode': document.getElementById('prop-force-gamemode').checked.toString(),
+                'spawn-animals': document.getElementById('prop-spawn-animals').checked.toString(),
+                'spawn-monsters': document.getElementById('prop-spawn-monsters').checked.toString(),
+                'spawn-npcs': document.getElementById('prop-spawn-npcs').checked.toString(),
             };
             
             try {
@@ -1639,33 +2318,281 @@
                 const res = await fetch(`${API}/server/stats`);
                 const stats = await res.json();
                 if (stats.running) {
+                    const maxRam = stats.max_ram || 4;
                     document.getElementById('cpu-usage').textContent = stats.cpu + '%';
                     document.getElementById('cpu-bar').style.width = Math.min(stats.cpu, 100) + '%';
-                    document.getElementById('ram-usage').innerHTML = stats.memory.toFixed(1) + 'GB <small>/ 12GB</small>';
-                    document.getElementById('ram-bar').style.width = Math.min((stats.memory / 12) * 100, 100) + '%';
+                    document.getElementById('ram-usage').innerHTML = stats.memory.toFixed(1) + 'GB <small>/ ' + maxRam + 'GB</small>';
+                    document.getElementById('ram-bar').style.width = Math.min((stats.memory / maxRam) * 100, 100) + '%';
                 }
             } catch (e) {}
         }
         
-        async function loadPlayers() {
+        function startLiveStats() {
+            stopLiveStats();
+            statsIntervalId = setInterval(loadServerStats, 2000);
+            activityIntervalId = setInterval(loadActivity, 5000);
+        }
+        
+        function stopLiveStats() {
+            if (statsIntervalId) clearInterval(statsIntervalId);
+            if (activityIntervalId) clearInterval(activityIntervalId);
+            statsIntervalId = null;
+            activityIntervalId = null;
+        }
+        
+        async function loadActivity() {
             try {
-                const res = await fetch(`${API}/server/stats`);
-                const stats = await res.json();
-                const list = document.getElementById('players-list');
-                if (stats.players && stats.players.length > 0) {
-                    list.innerHTML = stats.players.map(p => `
-                        <div class="player-card">
-                            <div class="player-avatar">${p.charAt(0).toUpperCase()}</div>
-                            <div class="player-name">${p}</div>
-                        </div>
-                    `).join('');
-                } else {
-                    list.innerHTML = '<p style="color: var(--text-muted);">No players online</p>';
+                const res = await fetch(`${API}/activity?limit=10`);
+                const activities = await res.json();
+                const container = document.getElementById('recent-activity');
+                
+                if (!activities || activities.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted);">No recent activity</p>';
+                    return;
                 }
+                
+                container.innerHTML = activities.map(a => {
+                    let icon = '📋';
+                    let color = 'var(--text)';
+                    if (a.type === 'server_start') {
+                        icon = '🟢';
+                        color = '#4ade80';
+                    } else if (a.type === 'server_stop') {
+                        icon = '🔴';
+                        color = '#f87171';
+                    } else if (a.type.includes('command') || a.type.includes('admin')) {
+                        icon = '⚡';
+                        color = '#fbbf24';
+                    }
+                    
+                    const dt = a.datetime ? new Date(a.datetime).toLocaleString() : '';
+                    return `<div style="padding: 8px 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 16px;">${icon}</span>
+                        <span style="flex: 1; color: var(--text);">${a.message || a.type}</span>
+                        <span style="color: var(--text-muted); font-size: 12px;">${dt}</span>
+                    </div>`;
+                }).join('');
             } catch (e) {
-                document.getElementById('players-list').innerHTML = '<p style="color: var(--text-muted);">No players online</p>';
+                console.log('Failed to load activity', e);
             }
         }
+        
+        const INVENTORY_PNG_PATH = 'Inventory_items_PNGs/';
+
+        function getItemImageUrl(itemName) {
+            // Handle item IDs that might have namespace
+            const cleanName = itemName.replace('minecraft:', '').toLowerCase();
+            return INVENTORY_PNG_PATH + cleanName + '.png';
+        }
+
+        async function loadPlayers() {
+            try {
+                // Get all players who have ever joined
+                const allRes = await fetch(`${API}/players/all`);
+                const allData = await allRes.json();
+                const allPlayers = allData.players || [];
+                
+                // Get online player details
+                const onlineRes = await fetch(`${API}/players/details`);
+                const onlineData = await onlineRes.json();
+                const onlinePlayers = onlineData.players || [];
+                
+                // Create a map of online player details
+                const onlineMap = {};
+                for (const p of onlinePlayers) {
+                    onlineMap[p.name.toLowerCase()] = p;
+                }
+                
+                // Update counts
+                const onlineCount = allPlayers.filter(p => p.isOnline).length;
+                document.getElementById('players-online-count').textContent = onlineCount;
+                document.getElementById('players-total-count').textContent = allPlayers.length;
+                
+                const container = document.getElementById('players-container');
+                
+                if (allPlayers.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted);">No players found. Players will appear here once they join the server.</p>';
+                    return;
+                }
+                
+                // Sort: online first, then by last played
+                allPlayers.sort((a, b) => {
+                    if (a.isOnline && !b.isOnline) return -1;
+                    if (!a.isOnline && b.isOnline) return 1;
+                    return new Date(b.lastPlayed) - new Date(a.lastPlayed);
+                });
+                
+                const onlineSection = allPlayers.filter(p => p.isOnline);
+                const offlineSection = allPlayers.filter(p => !p.isOnline);
+                
+                let html = '';
+                
+                // Online players section
+                if (onlineSection.length > 0) {
+                    html += `<div class="players-section">
+                        <h3>Online (${onlineSection.length})</h3>
+                        <div class="player-grid">`;
+                    
+                    for (const player of onlineSection) {
+                        const details = onlineMap[player.name.toLowerCase()] || {};
+                        const coords = details.coords && details.coords.x !== undefined
+                            ? `${Math.round(details.coords.x)}, ${Math.round(details.coords.y)}, ${Math.round(details.coords.z)}`
+                            : 'Unknown';
+                        const health = details.health !== undefined && details.health !== null ? details.health.toFixed(1) : '?';
+                        const hunger = details.hunger !== undefined && details.hunger !== null ? details.hunger : '?';
+                        const xp = details.xp_level !== undefined && details.xp_level !== null ? details.xp_level : '?';
+                        const gm = details.gamemode || 'survival';
+                        
+                        html += `
+                            <div class="player-entry online" onclick="openInventoryModal('${player.name}')">
+                                <div class="player-head">
+                                    <img src="https://minotar.net/helm/${player.name}/48.png" alt="${player.name}" 
+                                        onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2260%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2240%22>?</text></svg>'">
+                                </div>
+                                <div class="player-entry-details">
+                                    <div class="player-entry-name">
+                                        ${player.name}
+                                        <span class="online-badge">ONLINE</span>
+                                    </div>
+                                    <div class="player-entry-meta">
+                                        <span class="meta-item">${gm}</span>
+                                    </div>
+                                    <div class="player-entry-stats">
+                                        <span class="stat health">❤ ${health}</span>
+                                        <span class="stat hunger">🍗 ${hunger}</span>
+                                        <span class="stat xp">✦ ${xp}</span>
+                                    </div>
+                                    <div class="player-entry-coords">${coords}</div>
+                                </div>
+                            </div>`;
+                    }
+                    
+                    html += `</div></div>`;
+                }
+                
+                // Offline players section
+                if (offlineSection.length > 0) {
+                    html += `<div class="players-section" style="margin-top: 24px;">
+                        <h3>Offline (${offlineSection.length})</h3>
+                        <div class="player-grid">`;
+                    
+                    for (const player of offlineSection.slice(0, 20)) {
+                        const lastPlayed = player.lastPlayed 
+                            ? new Date(player.lastPlayed).toLocaleDateString() 
+                            : 'Unknown';
+                        
+                        html += `
+                            <div class="player-entry offline">
+                                <div class="player-head">
+                                    <img src="https://minotar.net/helm/${player.name}/48.png" alt="${player.name}"
+                                        onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2260%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2240%22>?</text></svg>'">
+                                </div>
+                                <div class="player-entry-details">
+                                    <div class="player-entry-name">
+                                        ${player.name}
+                                    </div>
+                                    <div class="player-entry-meta">
+                                        <span class="meta-item">Last seen: ${lastPlayed}</span>
+                                    </div>
+                                </div>
+                            </div>`;
+                    }
+                    
+                    if (offlineSection.length > 20) {
+                        html += `<div style="grid-column: 1 / -1; text-align: center; padding: 16px; color: var(--text-muted);">
+                            And ${offlineSection.length - 20} more offline players...
+                        </div>`;
+                    }
+                    
+                    html += `</div></div>`;
+                }
+                
+                container.innerHTML = html;
+                
+            } catch (e) {
+                console.error('Failed to load players:', e);
+                document.getElementById('players-container').innerHTML = '<p style="color: var(--text-muted);">Failed to load players</p>';
+            }
+        }
+
+        async function openInventoryModal(playerName) {
+            const modal = document.getElementById('inventory-modal');
+            const nameEl = document.getElementById('modal-player-name');
+            const headEl = document.getElementById('modal-player-head');
+            const statusEl = document.getElementById('modal-player-status');
+            const gridEl = document.getElementById('modal-inventory-grid');
+            
+            nameEl.textContent = playerName;
+            headEl.innerHTML = `<img src="https://minotar.net/helm/${playerName}/64.png" alt="${playerName}"
+                onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2260%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2240%22>?</text></svg>'">`;
+            
+            try {
+                const res = await fetch(`${API}/player/${playerName}/inventory`);
+                const data = await res.json();
+                
+                if (data.error) {
+                    statusEl.innerHTML = '<span class="status-item">Player not online</span>';
+                    gridEl.innerHTML = '<div class="empty-inventory">Player is not currently online</div>';
+                } else {
+                    statusEl.innerHTML = `
+                        <span class="status-item">${data.gamemode || 'survival'}</span>
+                        <span class="status-item">❤ ${data.health !== null ? data.health.toFixed(1) : '?'}</span>
+                        <span class="status-item">🍗 ${data.hunger !== null ? data.hunger : '?'}</span>
+                        <span class="status-item">✦ Level ${data.xp_level !== null ? data.xp_level : '?'}</span>
+                    `;
+                    
+                    if (data.coords) {
+                        statusEl.innerHTML += `<span class="status-item">📍 ${Math.round(data.coords.x)}, ${Math.round(data.coords.y)}, ${Math.round(data.coords.z)}</span>`;
+                    }
+                    
+                    const inventory = data.inventory || [];
+                    
+                    if (inventory.length === 0) {
+                        gridEl.innerHTML = '<div class="empty-inventory">Inventory is empty</div>';
+                    } else {
+                        let gridHtml = '';
+                        // Create 45 slots (standard inventory + hotbar)
+                        for (let i = 0; i < 45; i++) {
+                            const item = inventory[i];
+                            if (item) {
+                                const itemName = item.item;
+                                const count = item.count;
+                                const displayName = itemName.replace('minecraft:', '').replace(/_/g, ' ');
+                                const imgUrl = getItemImageUrl(itemName);
+                                gridHtml += `
+                                    <div class="inventory-slot">
+                                        <img src="${imgUrl}" alt="${displayName}"
+                                            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect fill=%22%23444%22 width=%2232%22 height=%2232%22/><text x=%2216%22 y=%2220%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2210%22>?</text></svg>'">
+                                        ${count > 1 ? `<span class="count">${count}</span>` : ''}
+                                        <div class="item-tooltip">${displayName} x${count}</div>
+                                    </div>
+                                `;
+                            } else {
+                                gridHtml += '<div class="inventory-slot"></div>';
+                            }
+                        }
+                        gridEl.innerHTML = gridHtml;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load inventory:', e);
+                statusEl.innerHTML = '<span class="status-item">Error loading data</span>';
+                gridEl.innerHTML = '<div class="empty-inventory">Failed to load inventory</div>';
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeInventoryModal() {
+            document.getElementById('inventory-modal').classList.add('hidden');
+        }
+
+        // Close modal on outside click
+        document.getElementById('inventory-modal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeInventoryModal();
+            }
+        });
 
         // AI Settings
         async function loadAIStatus() {
@@ -1677,9 +2604,7 @@
         }
 
         async function saveAISettings() {
-            const mode = document.getElementById('ai-mode').value;
-            await fetch(`${API}/ai/mode/${mode}`, { method: 'POST' });
-            alert('Settings saved!');
+            await saveConfig();
         }
 
         async function savePrompt() {
@@ -1718,6 +2643,9 @@
 
         // Init
         loadProfiles();
+        loadServerStats();
+        loadActivity();
+        loadConfig();
         
         // Mod Manager Functions
         async function searchModsBtn() {

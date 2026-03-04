@@ -1,6 +1,24 @@
 import requests
 import json
 import math
+import os
+
+def load_config():
+    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    config_path = os.path.join(backend_dir, "config.json")
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+_config = load_config()
+_dynmap_cfg = _config.get("dynmap", {})
+_dynmap_enabled = _dynmap_cfg.get("enabled", True)
+_dynmap_host = _dynmap_cfg.get("host", "127.0.0.1")
+_dynmap_port = _dynmap_cfg.get("port", 8123)
 
 STRUCTURE_MARKERS = {
     "village": "Village",
@@ -46,12 +64,14 @@ BIOME_HINTS = {
 
 
 class DynmapIntegration:
-    def __init__(self, host="127.0.0.1", port=8123):
+    def __init__(self, host="127.0.0.1", port=8123, enabled=True):
         self.base_url = f"http://{host}:{port}"
         self.enabled = False
         self.endpoints = {}
-        self._test_connection()
-        self._load_worlds()
+        self._enabled_flag = enabled
+        if self._enabled_flag:
+            self._test_connection()
+            self._load_worlds()
     
     def _test_connection(self):
         endpoints_to_try = [
@@ -319,4 +339,4 @@ class DynmapIntegration:
         return f"Dynmap shows {len(players)} player(s) online: {', '.join(names)}"
 
 
-dynmap = DynmapIntegration()
+dynmap = DynmapIntegration(host=_dynmap_host, port=_dynmap_port, enabled=_dynmap_enabled)

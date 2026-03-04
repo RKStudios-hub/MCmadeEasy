@@ -27,6 +27,7 @@ from integrations.mod_loader import ModLoader
 from integrations.drive_backup import backup_manager
 from integrations.grief_protection import grief_protection
 from integrations.web_hosting import hosting_manager
+from core.audit_logger import audit_logger
 
 app = FastAPI()
 
@@ -188,12 +189,30 @@ def start(name: str):
     software = profile.get("software", "paper")
     print(f"[START] Profile: {name}, Software: {software}, RAM: {ram}")
     success, msg = server.start(profile_path, ram, software)
+    if success:
+        audit_logger.log("server_start", "system", f"Server '{name}' started with {ram} RAM", success=True)
     return {"success": success, "message": msg}
 
 @app.post("/stop")
 def stop():
+    profile = os.path.basename(server.current_profile) if server.current_profile else "unknown"
     success, msg = server.stop()
+    if success:
+        audit_logger.log("server_stop", "system", f"Server '{profile}' stopped", success=True)
     return {"success": success, "message": msg}
+
+@app.get("/activity")
+def get_activity(limit: int = 20):
+    logs = audit_logger.logs[-limit:]
+    return [
+        {
+            "type": log.get("type", ""),
+            "message": log.get("message", ""),
+            "datetime": log.get("datetime", ""),
+            "player": log.get("player", "")
+        }
+        for log in logs
+    ]
 
 @app.post("/dynmap/fullrender")
 def trigger_fullrender():
@@ -291,6 +310,132 @@ def get_nearby_entities(player: str):
     entities = server.get_nearby_entities(player)
     return {"entities": entities}
 
+@app.get("/players/all")
+def get_all_players():
+    """Get all players who have ever joined from usercache.json"""
+    profile_path = server.current_profile
+    
+    # If no profile loaded, try to get it from config
+    if not profile_path:
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "current_profile.json")
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, "r") as f:
+                    data = json.load(f)
+                    profile_path = data.get("path")
+            except:
+                pass
+    
+    # If still no profile, try to find any usercache in common locations
+    if not profile_path:
+        servers_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "servers")
+        if os.path.exists(servers_dir):
+            try:
+                for item in os.listdir(servers_dir):
+                    test_path = os.path.join(servers_dir, item, "usercache.json")
+                    if os.path.exists(test_path):
+                        profile_path = os.path.join(servers_dir, item)
+                        break
+            except:
+                pass
+    
+    if not profile_path:
+        return {"players": [], "error": "No profile loaded"}
+    
+    usercache_path = os.path.join(profile_path, "usercache.json")
+    
+    # Get currently online players using server query
+    online_players = []
+    if server.is_running():
+        try:
+            server_stats = server.get_stats()
+            online_players = server_stats.get("players", [])
+            if not isinstance(online_players, list):
+                online_players = []
+        except:
+            online_players = []
+    
+    # Read usercache if it exists
+    usercache = []
+    if os.path.exists(usercache_path):
+        try:
+            with open(usercache_path, "r") as f:
+                usercache = json.load(f)
+        except:
+            pass
+    
+    # Add any currently online players that might not be in usercache yet (offline accounts)
+    existing_names = {entry.get("name", "").lower() for entry in usercache}
+    for player_name in online_players:
+        if player_name.lower() not in existing_names:
+            # Add the online player dynamically (offline/non-premium account)
+            usercache.insert(0, {
+                "name": player_name,
+                "uuid": "offline_" + player_name,
+                "expiresOn": "Now"
+            })
+    
+    players = []
+    # Create lowercase set for case-insensitive matching
+    online_players_lower = [p.lower() for p in online_players]
+    
+    for entry in usercache:
+        name = entry.get("name", "")
+        uuid = entry.get("uuid", "")
+        expires = entry.get("expiresOn", "")
+        
+        # Check if online (case-insensitive)
+        is_online = name.lower() in online_players_lower
+        
+        # Try to get stats file for additional info (only for offline players to save time)
+        stats_data = None
+        if not is_online and uuid and not uuid.startswith("offline_"):
+            stats_path = os.path.join(profile_path, "world", "stats", f"{uuid}.json")
+            if os.path.exists(stats_path):
+                try:
+                    with open(stats_path, "r") as f:
+                        stats_data = json.load(f)
+                except:
+                    pass
+        
+        players.append({
+            "name": name,
+            "uuid": uuid,
+            "lastPlayed": expires,
+            "isOnline": is_online,
+            "stats": stats_data
+        })
+    
+    return {"players": players}
+
+@app.get("/players/details")
+def get_players_details():
+    return {"players": server.get_players_details()}
+
+@app.get("/player/{player}/inventory")
+def get_player_inventory(player: str):
+    """Get detailed inventory for a specific player"""
+    # Only get inventory if player is online
+    stats = server.get_stats()
+    online_players = [p.lower() for p in stats.get("players", [])]
+    
+    if player.lower() not in online_players:
+        return {"error": "Player not online"}
+    
+    # Query player details
+    details = server.get_player_details(player)
+    if details:
+        return {
+            "name": player,
+            "inventory": details.get("inventory", []),
+            "coords": details.get("coords"),
+            "gamemode": details.get("gamemode"),
+            "health": details.get("health"),
+            "hunger": details.get("hunger"),
+            "xp_level": details.get("xp_level")
+        }
+    return {"error": "Could not get player data"}
+
 @app.get("/player/{player}/locate/{structure}")
 def locate_structure(player: str, structure: str):
     result = server.locate_structure(player, structure)
@@ -338,7 +483,7 @@ def ai_reload():
 
 @app.get("/config")
 def get_config():
-    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config.json")
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.json")
     if os.path.exists(config_path):
         with open(config_path, "r") as f:
             return json.load(f)
@@ -346,7 +491,8 @@ def get_config():
 
 @app.post("/config")
 def save_config(data: dict):
-    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config.json")
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.json")
+    print(f"[CONFIG] Saving to: {config_path}")
     with open(config_path, "w") as f:
         json.dump(data, f, indent=4)
     ai_engine.mc_ai.reload()
@@ -420,38 +566,42 @@ async def broadcast_console():
                                 server.add_output_line(ai_msg)
                                 command = f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{response}","color":"white"}}]'
                                 server.send_command(command)
-                                
-                                if result.get("command"):
-                                    cmd = result["command"]
+                            
+                            if result:
+                                commands_to_run = result.get("commands") or ([result.get("command")] if result.get("command") else [])
+                                for cmd in commands_to_run:
+                                    if not cmd:
+                                        continue
                                     print(f"[AI] Executing command: {cmd}")
-                                    # If command is a LOCATE token, run locate -> parse -> tp
-                                    if isinstance(cmd, str) and cmd.startswith("LOCATE:"):
+                                    if isinstance(cmd, str) and cmd.startswith("LOCATE_TP:"):
+                                        parts = cmd.split(":", 2)
+                                        if len(parts) == 3:
+                                            structure = parts[1]
+                                            target = parts[2] if parts[2] else player
+                                            locate_resp = server.locate_structure(player, structure)
+                                            print(f"[AI] Locate response: {locate_resp}")
+                                            if locate_resp:
+                                                m = re.search(r"(-?\\d+)\\s+(-?\\d+)\\s+(-?\\d+)", locate_resp)
+                                                if m:
+                                                    x, y, z = m.group(1), m.group(2), m.group(3)
+                                                    tp_cmd = f"tp {target} {x} {y} {z}"
+                                                    server.send_command(tp_cmd)
+                                                else:
+                                                    server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"Could not parse locate output for {structure}.","color":"white"}}]')
+                                            else:
+                                                server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"Locate failed for {structure}.","color":"white"}}]')
+                                    elif isinstance(cmd, str) and cmd.startswith("LOCATE:"):
                                         parts = cmd.split(":", 1)
                                         if len(parts) == 2:
                                             structure = parts[1]
                                             locate_resp = server.locate_structure(player, structure)
                                             print(f"[AI] Locate response: {locate_resp}")
                                             if locate_resp:
-                                                # Try to extract coordinates like 'Found nearest village at 1234 64 -567'
-                                                m = re.search(r"(-?\\d+)\\s+(-?\\d+)\\s+(-?\\d+)", locate_resp)
-                                                if m:
-                                                    x, y, z = m.group(1), m.group(2), m.group(3)
-                                                    tp_cmd = f"tp {player} {x} {y} {z}"
-                                                    server.send_command(tp_cmd)
-                                                else:
-                                                    # Couldn't parse coords, inform player
-                                                    server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"Could not parse locate output for {structure}.","color":"white"}}]')
+                                                server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{locate_resp}","color":"white"}}]')
                                             else:
                                                 server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"Locate failed for {structure}.","color":"white"}}]')
                                     else:
                                         server.send_command(cmd)
-                        
-                        for ws in console_subscribers[:]:
-                            try:
-                                await ws.send_json({"lines": lines})
-                            except:
-                                if ws in console_subscribers:
-                                    console_subscribers.remove(ws)
             await asyncio.sleep(0.5)
         except Exception:
             await asyncio.sleep(0.5)
@@ -470,8 +620,8 @@ def get_mod_versions(project_id: str):
     return mod_loader.get_mod_versions(project_id)
 
 @app.get("/mods/{profile}")
-def get_mods(profile: str):
-    return mod_loader.get_mods_list(profile)
+def get_mods(profile: str, software: str = None):
+    return mod_loader.get_mods_list(profile, software)
 
 @app.post("/mods/{profile}/install")
 async def install_mod(profile: str, request: Request):
@@ -479,11 +629,12 @@ async def install_mod(profile: str, request: Request):
         body = await request.json()
         mod_url = body.get("url")
         mod_name = body.get("name", "Unknown Mod")
+        software = body.get("software")
         
         if not mod_url:
             return {"success": False, "error": "No mod URL provided"}
         
-        result = mod_loader.install_mod(profile, mod_url)
+        result = mod_loader.install_mod(profile, mod_url, software)
         
         if result.get("success"):
             await broadcast_console_message(f"Installing mod: {mod_name}...")
@@ -496,8 +647,8 @@ async def install_mod(profile: str, request: Request):
         return {"success": False, "error": str(e)}
 
 @app.delete("/mods/{profile}/{mod_name}")
-def remove_mod(profile: str, mod_name: str):
-    return mod_loader.remove_mod(profile, mod_name)
+def remove_mod(profile: str, mod_name: str, software: str = None):
+    return mod_loader.remove_mod(profile, mod_name, software)
 
 @app.get("/backup/{profile}")
 def create_backup(profile: str):

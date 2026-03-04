@@ -73,21 +73,96 @@ async function loadConfig() {
     try {
         const res = await fetch(`${API}/config`);
         const config = await res.json();
+        
         if (config.ai) {
-            document.getElementById('api-key').value = config.ai.api_key || '';
-            document.getElementById('ai-model').value = config.ai.model || 'llama-3.3-70b-versatile';
-            document.getElementById('ai-provider').value = config.ai.provider || 'groq';
-            document.getElementById('ai-name').value = config.ai.ai_name || 'Ava';
-            document.getElementById('response-method').value = config.ai.response_method || 'msg';
-            document.getElementById('admin-players').value = (config.ai.admin_players || []).join(', ');
-            document.getElementById('ai-prompt').value = config.ai.system_prompt || '';
-            document.getElementById('auto-execute').checked = config.ai.auto_execute || false;
+            const setValue = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.value = val;
+            };
+            const setChecked = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.checked = val;
+            };
+            
+            setValue('api-key-groq', config.ai.providers?.groq?.api_key || '');
+            setValue('api-key-openai', config.ai.providers?.openai?.api_key || '');
+            setValue('api-key-anthropic', config.ai.providers?.anthropic?.api_key || '');
+            setValue('api-key-google', config.ai.providers?.google?.api_key || '');
+            setValue('api-key-azure', config.ai.providers?.azure?.api_key || '');
+            setValue('azure-endpoint', config.ai.providers?.azure?.endpoint || '');
+            setValue('azure-deployment', config.ai.providers?.azure?.deployment || '');
+            setValue('local-url', config.ai.providers?.local?.url || 'http://localhost:11434');
+            setValue('ai-provider', config.ai.provider || 'groq');
+            setValue('ai-model', config.ai.model || 'llama-3.1-8b-instant');
+            setValue('ai-mode', config.ai.mode || 'auto-safe');
+            setValue('ai-name', config.ai.ai_name || 'Ava');
+            setValue('response-method', config.ai.response_method || 'msg');
+            setValue('admin-players', (config.ai.roles?.admin || []).join(', '));
+            setValue('ai-prompt', config.ai.system_prompt || '');
+            setChecked('auto-execute', config.ai.auto_execute || false);
+            setValue('vision-provider', config.ai.vision_provider || config.ai.provider || 'groq');
+            setValue('vision-api-key', config.ai.vision_api_key || '');
+            updateProviderModels();
+            if (document.getElementById('vision-model')) {
+                updateVisionProviderModels(true);
+                const visionModel = config.ai.vision_model || '';
+                const providerKey = config.ai.vision_provider || config.ai.provider || 'groq';
+                if (visionModel && PROVIDER_MODELS[providerKey]?.includes(visionModel)) {
+                    setValue('vision-model', visionModel);
+                    setValue('vision-model-custom', '');
+                } else {
+                    setValue('vision-model-custom', visionModel);
+                }
+            }
         }
         if (config.server) {
             document.getElementById('ram-setting').value = config.server.default_ram || '1G';
         }
     } catch (e) {
         console.log('Config loading failed', e);
+    }
+}
+
+    const PROVIDER_MODELS = {
+        groq: ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "llama-3.2-90b-vision-preview", "meta-llama/llama-4-scout-17b-16e-instruct", "mixtral-8x7b-32768"],
+        openai: ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
+        anthropic: ["claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229"],
+        google: ["gemini-1.5-flash", "gemini-1.5-pro"],
+        azure: ["gpt-4", "gpt-35-turbo"],
+        local: ["llama3", "llama2", "mistral", "codellama", "phi3", "gemma"]
+    };
+
+function updateProviderModels() {
+    const provider = document.getElementById('ai-provider').value;
+    const modelSelect = document.getElementById('ai-model');
+    modelSelect.innerHTML = '';
+    
+    const models = PROVIDER_MODELS[provider] || [];
+    models.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model;
+        option.textContent = model;
+        modelSelect.appendChild(option);
+    });
+}
+
+function updateVisionProviderModels(forceSelectFirst = false) {
+    const providerEl = document.getElementById('vision-provider');
+    const modelSelect = document.getElementById('vision-model');
+    if (!providerEl || !modelSelect) return;
+    const provider = providerEl.value;
+    modelSelect.innerHTML = '';
+    
+    const models = PROVIDER_MODELS[provider] || [];
+    models.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model;
+        option.textContent = model;
+        modelSelect.appendChild(option);
+    });
+    
+    if (forceSelectFirst && models.length > 0) {
+        modelSelect.value = models[0];
     }
 }
 
@@ -99,15 +174,42 @@ async function saveConfig() {
         if (!config.ai) config.ai = {};
         if (!config.server) config.server = {};
         
-        config.ai.api_key = document.getElementById('api-key').value;
-        config.ai.model = document.getElementById('ai-model').value;
         config.ai.provider = document.getElementById('ai-provider').value;
+        config.ai.model = document.getElementById('ai-model').value;
+        const visionProviderEl = document.getElementById('vision-provider');
+        const visionModelEl = document.getElementById('vision-model');
+        const visionApiKeyEl = document.getElementById('vision-api-key');
+        if (visionProviderEl) config.ai.vision_provider = visionProviderEl.value;
+        const visionCustomEl = document.getElementById('vision-model-custom');
+        if (visionModelEl) config.ai.vision_model = visionModelEl.value;
+        if (visionCustomEl && visionCustomEl.value.trim()) {
+            config.ai.vision_model = visionCustomEl.value.trim();
+        }
+        if (visionApiKeyEl) config.ai.vision_api_key = visionApiKeyEl.value;
+        
+        if (!config.ai.providers) config.ai.providers = {};
+        
+        config.ai.providers.groq = { api_key: document.getElementById('api-key-groq').value };
+        config.ai.providers.openai = { api_key: document.getElementById('api-key-openai').value };
+        config.ai.providers.anthropic = { api_key: document.getElementById('api-key-anthropic').value };
+        config.ai.providers.google = { api_key: document.getElementById('api-key-google').value };
+        config.ai.providers.azure = { 
+            api_key: document.getElementById('api-key-azure').value,
+            endpoint: document.getElementById('azure-endpoint').value,
+            deployment: document.getElementById('azure-deployment').value
+        };
+        
+        config.ai.providers.local = {
+            url: document.getElementById('local-url').value,
+            model: document.getElementById('ai-model').value
+        };
+        
         config.ai.ai_name = document.getElementById('ai-name').value;
         config.ai.response_method = document.getElementById('response-method').value;
-        config.ai.system_prompt = document.getElementById('ai-prompt').value;
         
         const adminInput = document.getElementById('admin-players').value;
-        config.ai.admin_players = adminInput.split(',').map(s => s.trim()).filter(s => s);
+        if (!config.ai.roles) config.ai.roles = {};
+        config.ai.roles.admin = adminInput.split(',').map(s => s.trim()).filter(s => s);
         
         config.ai.auto_execute = document.getElementById('auto-execute').checked;
         config.server.default_ram = document.getElementById('ram-setting').value;
@@ -432,7 +534,7 @@ function colorizeLine(line) {
 }
 
 function connectConsole() {
-    if (ws) return;
+    if (ws && ws.readyState === WebSocket.OPEN) return;
     
     lastLineCount = 0;
     
@@ -446,16 +548,22 @@ function connectConsole() {
         
         const consoleDiv = document.getElementById('console');
         
-        if (lines.length > lastLineCount) {
-            const newLines = lines.slice(lastLineCount);
-            newLines.forEach(line => {
-                line = stripColorCodes(line);
-                const cls = getLineClass(line);
-                const escaped = escapeHtml(line);
-                const colored = colorizeLine(escaped);
-                consoleDiv.innerHTML += `<div class="line ${cls}">${colored}</div>`;
-            });
-            lastLineCount = lines.length;
+        if (lines.length > 0) {
+            if (lines.length < lastLineCount || lastLineCount === 0) {
+                lastLineCount = 0;
+            }
+            
+            if (lines.length > lastLineCount) {
+                const newLines = lines.slice(lastLineCount);
+                newLines.forEach(line => {
+                    line = stripColorCodes(line);
+                    const cls = getLineClass(line);
+                    const escaped = escapeHtml(line);
+                    const colored = colorizeLine(escaped);
+                    consoleDiv.innerHTML += `<div class="line ${cls}">${colored}</div>`;
+                });
+                lastLineCount = lines.length;
+            }
         }
         
         if (ai) {
@@ -470,6 +578,11 @@ function connectConsole() {
     };
     
     ws.onclose = () => {
+        ws = null;
+        setTimeout(connectConsole, 2000);
+    };
+    
+    ws.onerror = () => {
         ws = null;
     };
 }
@@ -523,7 +636,8 @@ async function installMod(projectId, modTitle) {
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     url: file.url,
-                    name: modTitle || projectId
+                    name: modTitle || projectId,
+                    software: currentSoftware
                 })
             });
             const result = await installRes.json();
@@ -546,7 +660,8 @@ async function installMod(projectId, modTitle) {
 async function loadInstalledMods() {
     if (!currentProfile) return;
     try {
-        const res = await fetch(`${API}/mods/${currentProfile}`);
+        const url = currentSoftware ? `${API}/mods/${currentProfile}?software=${encodeURIComponent(currentSoftware)}` : `${API}/mods/${currentProfile}`;
+        const res = await fetch(url);
         const mods = await res.json();
         
         const list = document.getElementById('installed-mods-list');
@@ -568,7 +683,8 @@ async function loadInstalledMods() {
 async function removeMod(modName) {
     if (!currentProfile) return;
     try {
-        await fetch(`${API}/mods/${currentProfile}/${modName}`, {method: 'DELETE'});
+        const url = currentSoftware ? `${API}/mods/${currentProfile}/${modName}?software=${encodeURIComponent(currentSoftware)}` : `${API}/mods/${currentProfile}/${modName}`;
+        await fetch(url, {method: 'DELETE'});
         loadInstalledMods();
     } catch (e) {
         alert('Failed to remove mod');

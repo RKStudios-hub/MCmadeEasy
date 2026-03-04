@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MCmadeEasy - Plugin Browser</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg: #050505;
+  --card: rgba(20, 20, 20, 0.6);
+  --border: rgba(255, 255, 255, 0.08);
+  --accent: #8b5cf6;
+  --accent-glow: rgba(139, 92, 246, 0.4);
+  --text: #ffffff;
+  --text-muted: #a1a1aa;
+  --danger: #ef4444;
+  --success: #10b981;
+}
+body{
+  margin:0;
+  background:var(--bg);
+  font-family:'Inter',sans-serif;
+  color:var(--text);
+  height:100vh;
+  overflow:hidden;
+}
+header{
+  padding:15px 25px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:rgba(5,5,5,0.9);
+  backdrop-filter:blur(10px);
+}
+.logo{
+  font-weight:600;
+  font-size:16px;
+  color:var(--accent);
+  letter-spacing:1px;
+}
+.server-info{
+  background:var(--card);
+  padding:8px 15px;
+  border-radius:20px;
+  font-size:12px;
+  color:var(--text-muted);
+  border:1px solid var(--border);
+}
+.server-info strong{
+  color:var(--accent);
+}
+.topbar{
+  display:flex;
+  gap:10px;
+  padding:15px 25px;
+  background:rgba(5,5,5,0.5);
+  border-bottom:1px solid var(--border);
+}
+input,select{
+  background:var(--card);
+  border:1px solid var(--border);
+  padding:10px 14px;
+  border-radius:8px;
+  color:white;
+  min-width:150px;
+  font-size:13px;
+  outline:none;
+  transition:border-color 0.2s;
+}
+input:focus,select:focus{
+  border-color:var(--accent);
+}
+button{
+  background:var(--accent);
+  border:none;
+  padding:10px 16px;
+  border-radius:8px;
+  font-weight:500;
+  cursor:pointer;
+  transition:all 0.2s;
+  font-size:13px;
+  color:white;
+}
+button:hover{
+  background:#7c3aed;
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px var(--accent-glow);
+}
+.grid{
+  padding:20px 25px;
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+  gap:18px;
+  overflow-y:auto;
+  height:calc(100vh - 180px);
+  padding-bottom:80px;
+}
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:15px;
+  padding-top:20px;
+  transition:all 0.25s;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+.card:hover{
+  border-color:var(--accent);
+  box-shadow:0 0 20px var(--accent-glow);
+  transform:translateY(-2px);
+}
+.card img{
+  width:100%;
+  height:120px;
+  object-fit:cover;
+  border-radius:8px;
+  margin-bottom:10px;
+}
+.card h3{
+  margin:4px 0;
+  font-size:14px;
+  font-weight:500;
+}
+.card p{
+  font-size:11px;
+  color:var(--text-muted);
+  min-height:30px;
+  line-height:1.4;
+}
+.tags{
+  margin-top:8px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+}
+.tag{
+  display:inline-block;
+  background:rgba(139,92,246,0.2);
+  padding:2px 8px;
+  border-radius:12px;
+  font-size:9px;
+  color:var(--accent);
+}
+.tag-spigot{background:rgba(240,101,28,0.3);color:#f0651c;}
+.tag-paper{background:rgba(240,240,240,0.2);color:#f0f0f0;}
+.tag-bukkit{background:rgba(161,0,0,0.3);color:#a10000;}
+.tag-purpur{background:rgba(102,51,153,0.3);color:#663399;}
+.install-btn{
+  margin-top:auto;
+  background:var(--accent);
+  width:100%;
+}
+.install-btn:hover{
+  background:#7c3aed;
+}
+#pagination{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:15px;
+  padding:15px;
+  background:rgba(5,5,5,0.95);
+  border-top:1px solid var(--border);
+  z-index:100;
+}
+#pagination.hidden{
+  display:none;
+}
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.8);
+  backdrop-filter:blur(8px);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+}
+.modal-content{
+  width:600px;
+  max-height:80vh;
+  overflow:auto;
+  background:rgba(20,20,20,0.95);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:25px;
+}
+.version-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  padding:15px;
+  border-radius:12px;
+  margin-bottom:12px;
+}
+.version-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+.version-header strong{
+  font-size:13px;
+}
+.btn-green{
+  background:var(--success);
+  color:#000;
+}
+.btn-green:hover{
+  background:#059669;
+}
+.btn-grey{
+  background:#374151;
+  color:#6b7280;
+  cursor:not-allowed;
+}
+.btn-visited{
+  background:rgba(59,130,246,0.3);
+  color:#60a5fa;
+  border:1px solid #3b82f6;
+  cursor:default;
+}
+.btn-close{
+  background:rgba(255,255,255,0.1);
+  float:right;
+}
+.btn-close:hover{
+  background:rgba(255,255,255,0.2);
+}
+.loading{
+  text-align:center;
+  color:var(--text-muted);
+  padding:60px;
+  font-size:14px;
+}
+.installed-badge{
+  background:var(--success);
+  color:#000;
+  padding:3px 8px;
+  border-radius:6px;
+  font-size:10px;
+  font-weight:600;
+  margin-left:8px;
+}
+.card-visited{
+  position:relative !important;
+}
+.card-visited::after{
+  content:'✓';
+  position:absolute;
+  top:8px;
+  right:8px;
+  background:#3b82f6;
+  color:#fff;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  font-weight:bold;
+  z-index:10;
+}
+::-webkit-scrollbar{
+  width:8px;
+}
+::-webkit-scrollbar-track{
+  background:transparent;
+}
+::-webkit-scrollbar-thumb{
+  background:rgba(255,255,255,0.1);
+  border-radius:4px;
+}
+::-webkit-scrollbar-thumb:hover{
+  background:rgba(255,255,255,0.2);
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">PLUGIN BROWSER</div>
+</header>
+
+<div class="topbar">
+  <input id="search" placeholder="Search plugins..." style="flex:1;" />
+  <select id="category" style="width:140px;">
+    <option value="">All Categories</option>
+    <option value="admin-tools">Admin Tools</option>
+    <option value="anti-grief">Anti-Grief</option>
+    <option value="chat">Chat</option>
+    <option value="economy">Economy</option>
+    <option value="fun">Fun</option>
+    <option value="games">Games</option>
+    <option value="general">General</option>
+    <option value="mechanics">Mechanics</option>
+    <option value="moderation">Moderation</option>
+    <option value="roleplay">Roleplay</option>
+    <option value="security">Security</option>
+    <option value="teleporter">Teleporter</option>
+    <option value="tools">Tools</option>
+    <option value="world-management">World Management</option>
+  </select>
+  <select id="sort" style="width:140px;">
+    <option value="downloads">Most Downloads</option>
+    <option value="newest">Newest</option>
+    <option value="updated">Recently Updated</option>
+    <option value="rating">Highest Rated</option>
+  </select>
+  <button onclick="searchPlugins()">Search</button>
+  <div class="server-info" id="serverInfo" style="margin-left:10px;">Server: <strong>Not selected</strong></div>
+</div>
+
+<div class="grid" id="results">
+  <div class="loading">Search for plugins using the bar above</div>
+</div>
+
+<div class="pagination hidden" id="pagination">
+  <button onclick="prevPage()">Prev</button>
+  <span id="pageNum" style="color:var(--text-muted);">Page 1</span>
+  <button onclick="nextPage()">Next</button>
+</div>
+
+<div class="modal" id="versionModal">
+  <div class="modal-content">
+    <button class="btn-close" onclick="closeModal()">✕</button>
+    <h3 style="margin:10px 0 15px;" id="modalTitle">Plugin Details</h3>
+    <div id="pluginDetails"></div>
+  </div>
+</div>
+
+<script>
+let currentPage = 1;
+const limit = 24;
+let currentPluginId = null;
+
+const urlParams = new URLSearchParams(window.location.search);
+const profileName = urlParams.get('profile') || '';
+const serverVersion = urlParams.get('version') || '';
+
+function getVisitedPlugins() {
+  try {
+    return JSON.parse(localStorage.getItem('visitedPlugins') || '[]');
+  } catch(e) {
+    return [];
+  }
+}
+
+function markPluginVisited(pluginId, pluginName) {
+  const visited = getVisitedPlugins();
+  const key = String(pluginId);
+  if (!visited.some(p => p.id === key)) {
+    visited.push({ id: key, name: pluginName, visitedAt: new Date().toISOString() });
+    localStorage.setItem('visitedPlugins', JSON.stringify(visited));
+  }
+}
+
+function isPluginVisited(pluginId) {
+  const visited = getVisitedPlugins();
+  return visited.some(p => p.id === String(pluginId));
+}
+
+function updateServerInfo() {
+  document.getElementById('serverInfo').innerHTML = `Server: <strong>${profileName || 'Unknown'}</strong> (Paper/Spigot)`;
+}
+
+async function searchPlugins() {
+  currentPage = 1;
+  useFallback = false;
+  loadPlugins();
+}
+
+let searchTimeout = null;
+function onSearchInput() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    currentPage = 1;
+    useFallback = false;
+    loadPlugins();
+  }, 500);
+}
+
+async function loadPlugins() {
+  const query = document.getElementById('search').value.trim().toLowerCase();
+  const sort = document.getElementById('sort').value;
+
+  const grid = document.getElementById('results');
+  grid.innerHTML = '<div class="loading">Loading...</div>';
+
+  let url;
+  const cacheBust = '&t=' + Date.now() + '&r=' + Math.random();
+  if (query) {
+    url = `https://api.spiget.org/v2/search/resources/${encodeURIComponent(query)}?size=24&page=${currentPage}&sort=-${sort}${cacheBust}`;
+    console.log('Using search API, page', currentPage, ':', url);
+  } else {
+    url = `https://api.spiget.org/v2/resources?size=24&page=${currentPage}&sort=-${sort}${cacheBust}`;
+    console.log('Using resources API, page', currentPage, ':', url);
+  }
+
+  try {
+    const res = await fetch(url);
+    console.log('Response status:', res.status);
+    
+    if (!res.ok) {
+      useFallback = true;
+      loadFallbackPlugins();
+      return;
+    }
+    
+    let data = await res.json();
+    
+    if (!Array.isArray(data)) {
+      useFallback = true;
+      loadFallbackPlugins();
+      return;
+    }
+
+    console.log('Loaded', data.length, 'plugins');
+
+    useFallback = false;
+    console.log('API loaded successfully, found', data.length, 'plugins');
+
+    grid.innerHTML = '';
+
+    if (data.length === 0) {
+      grid.innerHTML = '<div class="loading">No plugins match your search.</div>';
+      document.getElementById('pagination').classList.add('hidden');
+      return;
+    }
+
+    document.getElementById('pagination').classList.remove('hidden');
+
+    const visited = getVisitedPlugins();
+
+    for (const plugin of data) {
+      const isVisited = isPluginVisited(plugin.id);
+      const card = document.createElement('div');
+      card.className = 'card' + (isVisited ? ' card-visited' : '');
+      if (isVisited) {
+        card.style.borderColor = '#3b82f6';
+      }
+      
+      const badgeHtml = isVisited ? '<span style="position:absolute;top:8px;right:8px;background:#3b82f6;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;z-index:10;">✓</span>' : '';
+      
+      card.innerHTML = `
+        ${badgeHtml}
+        <img src="https://api.spiget.org/v2/resources/${plugin.id}/icon" onerror="this.src='https://via.placeholder.com/300x120?text=No+Image'">
+        <h3>${plugin.name || 'Unknown'}</h3>
+        <p>${(plugin.tag || '').replace(/<[^>]*>/g, '').substring(0, 80)}</p>
+        <div class="tags">
+          <span class="tag">⭐ ${plugin.rating?.average?.toFixed(1) || 0}</span>
+          <span class="tag">📥 ${formatNumber(plugin.downloads || 0)}</span>
+        </div>
+        <button class="install-btn" onclick="openPluginDetails('${plugin.id}')">${isVisited ? 'Viewed' : 'View Details'}</button>
+      `;
+      grid.appendChild(card);
+    }
+
+    console.log('Added', data.length, 'cards to grid, showing page', currentPage);
+    document.getElementById('pageNum').innerText = `Page ${currentPage}`;
+    
+    console.log('First plugin on this page:', data[0]?.name || 'none');
+    
+    if (data.length < 24) {
+      document.getElementById('pagination').classList.add('hidden');
+    } else {
+      document.getElementById('pagination').classList.remove('hidden');
+    }
+  } catch (e) {
+    console.log('API failed:', e.name, e.message);
+    if (e.name === 'AbortError') {
+      console.log('Request timed out');
+    }
+    loadFallbackPlugins();
+  }
+}
+
+function formatNumber(num) {
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+  return num;
+}
+
+async function openPluginDetails(pluginId) {
+  currentPluginId = pluginId;
+  
+  const grid = document.getElementById('pluginDetails');
+  grid.innerHTML = '<div class="loading">Loading...</div>';
+  
+  document.getElementById('versionModal').style.display = 'flex';
+  
+  const url = `https://api.spiget.org/v2/resources/${pluginId}`;
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+  
+  try {
+    let res = await fetch(url);
+    if (!res.ok) {
+      res = await fetch(proxyUrl);
+    }
+    const plugin = await res.json();
+    
+    const isVisited = isPluginVisited(pluginId);
+    const btnClass = isVisited ? 'btn-visited' : 'btn-green';
+    const btnText = isVisited ? 'Visited' : 'Continue to Download';
+    const pluginUrl = `https://www.spigotmc.org/resources/${pluginId}`;
+    const btnAction = isVisited ? '' : `markPluginVisited(${plugin.id}, '${plugin.name.replace(/'/g, "\\'")}'); window.open('${pluginUrl}', '_blank'); closeModal();`;
+    
+    document.getElementById('modalTitle').textContent = plugin.name;
+    
+    let tagsHtml = '';
+    if (plugin.category) {
+      tagsHtml += `<span class="tag tag-spigot">${plugin.category.name}</span>`;
+    }
+    if (plugin.tag) {
+      tagsHtml += `<span class="tag">${plugin.tag.replace(/<[^>]*>/g, '')}</span>`;
+    }
+    
+    grid.innerHTML = `
+      <div class="version-card">
+        <div class="version-header">
+          <strong>${plugin.name}</strong>
+          <button class="${btnClass}" onclick="${btnAction}" ${isVisited ? 'disabled' : ''} style="width:auto;padding:8px 16px;">${btnText}</button>
+        </div>
+        <p style="color:var(--text-muted);font-size:12px;margin:10px 0;">${plugin.tag || 'No description'}</p>
+        <div class="tags">
+          ${tagsHtml}
+          <span class="tag">⭐ ${plugin.rating?.average?.toFixed(1) || 0} (${plugin.rating?.count || 0} votes)</span>
+          <span class="tag">📥 ${formatNumber(plugin.downloads)} downloads</span>
+          <span class="tag">🕐 Updated: ${plugin.updated ? new Date(plugin.updated * 1000).toLocaleDateString() : 'Unknown'}</span>
+        </div>
+      </div>
+      <div class="version-card">
+        <strong>How to install:</strong>
+        <p style="color:var(--text-muted);font-size:12px;margin:8px 0;line-height:1.5;">
+          1. Click "Continue to Download" to open the Spigot page<br>
+          2. Download the .jar file<br>
+          3. Drop the file into your server's <b>plugins</b> folder<br>
+          4. Restart your server
+        </p>
+      </div>
+    `;
+    
+  } catch (e) {
+    grid.innerHTML = '<div class="loading">Failed to load plugin details</div>';
+  }
+}
+
+function closeModal() {
+  document.getElementById('versionModal').style.display = 'none';
+  if (useFallback) {
+    loadFallbackPlugins();
+  } else {
+    loadPlugins();
+  }
+}
+
+function nextPage() {
+  console.log('Next clicked, currentPage was:', currentPage);
+  currentPage++;
+  console.log('Next clicked, currentPage now:', currentPage);
+  if (useFallback) {
+    loadFallbackPlugins();
+  } else {
+    loadPlugins();
+  }
+}
+
+function prevPage() {
+  console.log('Prev clicked, currentPage was:', currentPage);
+  if (currentPage > 1) {
+    currentPage--;
+    console.log('Prev clicked, currentPage now:', currentPage);
+    if (useFallback) {
+      loadFallbackPlugins();
+    } else {
+      loadPlugins();
+    }
+  }
+}
+
+const POPULAR_PLUGINS = [
+  { id: 128021, name: 'Distant Horizons', tag: 'A culling and LOD system for Minecraft', downloads: 2500000, rating: { average: 4.7 }, category: { name: 'World Management' } },
+  { id: 9089, name: 'EssentialsX', tag: 'The ultimate suite of Minecraft server tools', downloads: 15000000, rating: { average: 4.5 }, category: { name: 'General' } },
+  { id: 5754, name: 'Vault', tag: 'Permissions & Economy API', downloads: 12000000, rating: { average: 4.7 }, category: { name: 'API' } },
+  { id: 19710, name: 'LuckPerms', tag: 'Advanced permissions manager', downloads: 10000000, rating: { average: 4.8 }, category: { name: 'Admin Tools' } },
+  { id: 1923, name: 'WorldEdit', tag: 'In-game map editor', downloads: 9500000, rating: { average: 4.6 }, category: { name: 'Tools' } },
+  { id: 3839, name: 'WorldGuard', tag: 'Region protection', downloads: 9000000, rating: { average: 4.5 }, category: { name: 'Anti-Grief' } },
+  { id: 12038, name: 'PlaceholderAPI', tag: 'Expandable placeholder system', downloads: 8500000, rating: { average: 4.9 }, category: { name: 'API' } },
+  { id: 18800, name: 'GriefDefender', tag: 'Claim land and prevent grief', downloads: 7000000, rating: { average: 4.4 }, category: { name: 'Anti-Grief' } },
+  { id: 23391, name: 'CMI', tag: 'All-in-one management plugin', downloads: 6500000, rating: { average: 4.6 }, category: { name: 'General' } },
+  { id: 62, name: 'LogBlock', tag: 'Block logging and rollback', downloads: 6000000, rating: { average: 4.3 }, category: { name: 'Anti-Grief' } },
+  { id: 8643, name: 'dynmap', tag: 'Live web maps', downloads: 5500000, rating: { average: 4.5 }, category: { name: 'World Management' } },
+  { id: 28235, name: 'DeluxeMenus', tag: 'Custom GUI menus', downloads: 4500000, rating: { average: 4.7 }, category: { name: 'Tools' } },
+  { id: 32665, name: 'ItemsAdder', tag: 'Custom items and recipes', downloads: 4000000, rating: { average: 4.8 }, category: { name: 'Mechanics' } },
+  { id: 39557, name: 'DiscordSRV', tag: 'Discord-Minecraft bridge', downloads: 3800000, rating: { average: 4.6 }, category: { name: 'General' } },
+  { id: 54726, name: 'spark', tag: 'Performance profiler', downloads: 3500000, rating: { average: 4.9 }, category: { name: 'Tools' } },
+  { id: 18590, name: 'ProtocolLib', tag: 'Packet manipulation library', downloads: 8000000, rating: { average: 4.7 }, category: { name: 'API' } },
+  { id: 41906, name: 'Votifier', tag: 'Vote rewards', downloads: 3200000, rating: { average: 4.4 }, category: { name: 'Economy' } },
+  { id: 51186, name: 'CoreProtect', tag: 'Block logging & rollback', downloads: 7000000, rating: { average: 4.6 }, category: { name: 'Anti-Grief' } },
+  { id: 74, name: 'iConomy', tag: 'Economy system', downloads: 5500000, rating: { average: 4.2 }, category: { name: 'Economy' } },
+  { id: 122477, name: 'Plan', tag: 'Player analytics', downloads: 2800000, rating: { average: 4.8 }, category: { name: 'Tools' } },
+  { id: 115918, name: 'GlowItemFrames', tag: 'Glowing item frames', downloads: 2500000, rating: { average: 4.5 }, category: { name: 'Fun' } },
+  { id: 77325, name: 'LiteBans', tag: 'Advanced ban management', downloads: 2200000, rating: { average: 4.7 }, category: { name: 'Moderation' } },
+  { id: 12984, name: 'Multiverse-Core', tag: 'Multiple worlds', downloads: 6500000, rating: { average: 4.3 }, category: { name: 'World Management' } },
+  { id: 225694, name: 'CMI-Continuations', tag: 'Complete server management', downloads: 2000000, rating: { average: 4.6 }, category: { name: 'General' } },
+  { id: 138854, name: 'ChatTrigger', tag: 'Advanced chat control', downloads: 1800000, rating: { average: 4.5 }, category: { name: 'Chat' } }
+];
+
+function loadFallbackPlugins() {
+  const grid = document.getElementById('results');
+  const query = document.getElementById('search').value.trim().toLowerCase();
+  const size = 24;
+  
+  let plugins = POPULAR_PLUGINS;
+  if (query) {
+    plugins = POPULAR_PLUGINS.filter(p => p.name.toLowerCase().includes(query));
+  }
+  
+  const start = currentPage * size;
+  const pagedPlugins = plugins.slice(start, start + size);
+  
+  if (pagedPlugins.length === 0 && currentPage > 0) {
+    currentPage = 0;
+    loadFallbackPlugins();
+    return;
+  }
+  
+  const visited = getVisitedPlugins();
+  
+  for (const plugin of pagedPlugins) {
+    const isVisited = isPluginVisited(plugin.id);
+    const card = document.createElement('div');
+    card.className = 'card' + (isVisited ? ' card-visited' : '');
+    if (isVisited) {
+      card.style.borderColor = '#3b82f6';
+    }
+    
+    const badgeHtml = isVisited ? '<span style="position:absolute;top:8px;right:8px;background:#3b82f6;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;z-index:10;">✓</span>' : '';
+    
+    card.innerHTML = `
+      ${badgeHtml}
+      <img src="https://api.spiget.org/v2/resources/${plugin.id}/icon" onerror="this.src='https://via.placeholder.com/300x120?text=No+Image'">
+      <h3>${plugin.name}</h3>
+      <p>${plugin.tag || ''}</p>
+      <div class="tags">
+        <span class="tag">⭐ ${plugin.rating?.average?.toFixed(1) || 0}</span>
+        <span class="tag">📥 ${formatNumber(plugin.downloads)}</span>
+      </div>
+      <button class="install-btn" onclick="openFallbackPluginDetails('${plugin.id}')">${isVisited ? 'Viewed' : 'View Details'}</button>
+    `;
+    grid.appendChild(card);
+  }
+  
+  const totalPages = Math.ceil(plugins.length / limit);
+  document.getElementById('pageNum').innerText = `Page ${currentPage + 1}`;
+  
+  if (pagedPlugins.length < limit || currentPage >= totalPages - 1) {
+    document.getElementById('pagination').classList.add('hidden');
+  } else {
+    document.getElementById('pagination').classList.remove('hidden');
+  }
+}
+
+function openFallbackPluginDetails(pluginId) {
+  const plugin = POPULAR_PLUGINS.find(p => String(p.id) === String(pluginId));
+  if (!plugin) return;
+  
+  const isVisited = isPluginVisited(pluginId);
+  const pluginUrl = `https://www.spigotmc.org/resources/${pluginId}`;
+  const btnClass = isVisited ? 'btn-visited' : 'btn-green';
+  const btnText = isVisited ? 'Visited' : 'Continue to Download';
+  const btnAction = isVisited ? '' : `markPluginVisited(${plugin.id}, '${plugin.name.replace(/'/g, "\\'")}'); window.open('${pluginUrl}', '_blank'); closeModal();`;
+  
+  document.getElementById('modalTitle').textContent = plugin.name;
+  document.getElementById('versionModal').style.display = 'flex';
+  
+  const grid = document.getElementById('pluginDetails');
+  grid.innerHTML = `
+    <div class="version-card">
+      <div class="version-header">
+        <strong>${plugin.name}</strong>
+        <button class="${btnClass}" onclick="${btnAction}" ${isVisited ? 'disabled' : ''} style="width:auto;padding:8px 16px;">${btnText}</button>
+      </div>
+      <p style="color:var(--text-muted);font-size:12px;margin:10px 0;">${plugin.tag}</p>
+      <div class="tags">
+        <span class="tag tag-spigot">${plugin.category?.name || 'General'}</span>
+        <span class="tag">⭐ ${plugin.rating?.average?.toFixed(1) || 0}</span>
+        <span class="tag">📥 ${formatNumber(plugin.downloads)} downloads</span>
+      </div>
+    </div>
+    <div class="version-card">
+      <strong>How to install:</strong>
+      <p style="color:var(--text-muted);font-size:12px;margin:8px 0;line-height:1.5;">
+        1. Click "Continue to Download" to open the Spigot page<br>
+        2. Download the .jar file<br>
+        3. Drop the file into your server's <b>plugins</b> folder<br>
+        4. Restart your server
+      </p>
+    </div>
+  `;
+}
+
+updateServerInfo();
+loadPlugins();
+</script>
+
+</body>
+</html>

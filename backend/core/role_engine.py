@@ -30,10 +30,13 @@ DEFAULT_ROLES = {
 
 INTENT_TO_PERMISSION = {
     "give_item": "give",
+    "give_multi": "give",
     "set_time": "time",
     "set_weather": "weather",
     "summon": "summon",
+    "summon_multi": "summon",
     "teleport": "tp",
+    "locate": "tp",
     "gamemode": "gamemode",
     "heal": "heal",
     "god_mode": "god",

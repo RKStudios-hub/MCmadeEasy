@@ -84,6 +84,11 @@ COMMAND_TEMPLATES = {
         "admin_only": True,
         "dangerous": False
     },
+    "locate": {
+        "template": None,
+        "admin_only": True,
+        "dangerous": False
+    },
     "gamemode": {
         "template": "gamemode {mode} {target}",
         "admin_only": True,
@@ -191,6 +196,13 @@ class CommandBuilder:
                     commands.append(cmd)
             return commands if commands else None
         
+        if intent == "locate":
+            structure = parameters.get("structure") or parameters.get("destination")
+            resolved = self._resolve_structure(structure)
+            if resolved:
+                return f"LOCATE:{resolved}"
+            return None
+        
         cmd = template["template"]
         
         params = parameters.copy()
@@ -198,6 +210,10 @@ class CommandBuilder:
         if intent == "teleport" and "destination" in params:
             resolved = self._resolve_destination(params["destination"])
             if resolved:
+                if isinstance(resolved, str) and resolved.startswith("LOCATE:"):
+                    structure_id = resolved.split(":", 1)[1]
+                    target = params.get("target", "@a")
+                    return f"LOCATE_TP:{structure_id}:{target}"
                 params["destination"] = resolved
             else:
                 return None
@@ -232,6 +248,17 @@ class CommandBuilder:
         if dest_lower.startswith("@") or (DYNMAP_AVAILABLE and dynmap and self._is_player(dest_lower)):
             return dest_lower
         
+        structure_id = self._resolve_structure(dest_lower)
+        if structure_id:
+            # Return a LOCATE token so main.py can run locate -> parse -> tp flow
+            return f"LOCATE:{structure_id}"
+        
+        return dest_lower
+    
+    def _resolve_structure(self, name):
+        if not name:
+            return None
+        struct_lower = str(name).lower().strip()
         structure_map = {
             "village": "village",
             "nearest village": "village",
@@ -258,12 +285,12 @@ class CommandBuilder:
             "ruined portal": "ruined_portal",
             "mineshaft": "mineshaft",
         }
-        
-        if dest_lower in structure_map:
-            # Return a LOCATE token so main.py can run locate -> parse -> tp flow
-            return f"LOCATE:{structure_map[dest_lower]}"
-        
-        return dest_lower
+        if struct_lower in structure_map:
+            return structure_map[struct_lower]
+        for key in sorted(structure_map.keys(), key=len, reverse=True):
+            if key in struct_lower:
+                return structure_map[key]
+        return None
     
     def _is_player(self, name):
         if not DYNMAP_AVAILABLE or not dynmap:
