@@ -8,7 +8,7 @@ import re
 import random
 import time
 
-from profile_manager import create_profile, list_profiles, get_profile, update_profile
+from profile_manager import create_profile, list_profiles, get_profile, update_profile, rename_profile, delete_profile
 from downloader import (
     get_vanilla_versions, download_vanilla,
     get_paper_versions, get_paper_builds, download_paper,
@@ -90,6 +90,75 @@ async def create_server_profile(name: str, request: Request):
     update_profile(name, {"software": software, "version": version, "ram": ram})
     
     return {"status": "ok", "profile": get_profile(name)}
+
+@app.post("/profile/{name}/edit")
+async def edit_server_profile(name: str, request: Request):
+    try:
+        body = await request.json()
+    except:
+        body = {}
+    
+    new_name = (body.get("name") or "").strip()
+    version = body.get("version")
+    ram = body.get("ram")
+    
+    if not get_profile(name):
+        return {"success": False, "message": f"Profile '{name}' not found"}
+    
+    if server.is_running() and os.path.basename(server.current_profile) == name:
+        return {"success": False, "message": "Cannot edit a running server. Stop it first."}
+    
+    old_profile_path = get_profile_path(name)
+    if new_name and new_name != name:
+        ok, err = rename_profile(name, new_name)
+        if not ok:
+            return {"success": False, "message": err or "Rename failed"}
+        name = new_name
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+        current_path = os.path.join(data_dir, "current_profile.json")
+        if os.path.exists(current_path):
+            try:
+                with open(current_path, "r") as f:
+                    data = json.load(f)
+                if data.get("path"):
+                    if data["path"] == old_profile_path:
+                        data["path"] = get_profile_path(name)
+                        with open(current_path, "w") as f:
+                            json.dump(data, f)
+            except:
+                pass
+    
+    update = {}
+    if version:
+        update["version"] = version
+    if ram:
+        update["ram"] = ram
+    if update:
+        update_profile(name, update)
+    
+    return {"success": True, "profile": get_profile(name)}
+
+@app.delete("/profile/{name}")
+def delete_server_profile(name: str):
+    if server.is_running() and os.path.basename(server.current_profile) == name:
+        return {"success": False, "message": "Cannot delete a running server. Stop it first."}
+    
+    ok, err = delete_profile(name)
+    if not ok:
+        return {"success": False, "message": err or "Delete failed"}
+    
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+    current_path = os.path.join(data_dir, "current_profile.json")
+    if os.path.exists(current_path):
+        try:
+            with open(current_path, "r") as f:
+                data = json.load(f)
+            if data.get("path") == get_profile_path(name):
+                os.remove(current_path)
+        except:
+            pass
+    
+    return {"success": True}
 
 @app.post("/profile/{name}/download")
 def download_server(name: str, software: str, version: str, build: str = None):

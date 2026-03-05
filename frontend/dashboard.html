@@ -608,6 +608,17 @@
             background: rgba(255, 255, 255, 0.2);
         }
 
+        .btn-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .btn-success:hover {
+            background: var(--success);
+            color: white;
+        }
+
         .status-indicator {
             display: flex;
             align-items: center;
@@ -831,6 +842,58 @@
 .modal-buttons .btn {
             flex: 1;
             justify-content: center;
+        }
+
+        .modal-note {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .context-menu {
+            position: fixed;
+            min-width: 200px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px;
+            z-index: 3000;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+        }
+
+        .context-menu.hidden {
+            display: none;
+        }
+
+        .context-item {
+            width: 100%;
+            background: none;
+            border: none;
+            color: var(--text);
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .context-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .context-item.danger {
+            color: var(--danger);
+        }
+
+        .context-item.danger:hover {
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        .context-item svg {
+            width: 16px;
+            height: 16px;
         }
 
         /* Players Tab */
@@ -1664,6 +1727,74 @@
         </div>
     </div>
 
+    <div id="profile-context-menu" class="context-menu hidden">
+        <button class="context-item" onclick="handleEditProfile()">Edit</button>
+        <button class="context-item danger" onclick="handleDeleteProfile()"><i data-lucide="trash-2"></i> Delete Profile</button>
+    </div>
+
+    <div id="edit-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Edit Server Profile</h3>
+            <div class="input-row">
+                <label>Server Name</label>
+                <input type="text" id="edit-profile-name" placeholder="my-server">
+            </div>
+            <div class="input-row">
+                <label>Server Software</label>
+                <input type="text" id="edit-profile-software" disabled>
+            </div>
+            <div class="input-row">
+                <label>Version</label>
+                <select id="edit-profile-version">
+                    <option value="1.21.4">1.21.4</option>
+                    <option value="1.21.3">1.21.3</option>
+                    <option value="1.21.1">1.21.1</option>
+                    <option value="1.21">1.21</option>
+                    <option value="1.20.4">1.20.4</option>
+                    <option value="1.20.2">1.20.2</option>
+                    <option value="1.20.1">1.20.1</option>
+                    <option value="1.19.2">1.19.2</option>
+                </select>
+            </div>
+            <div class="input-row">
+                <label>RAM Allocation</label>
+                <select id="edit-profile-ram">
+                    <option value="2G">2 GB</option>
+                    <option value="4G">4 GB</option>
+                    <option value="6G">6 GB</option>
+                    <option value="8G">8 GB</option>
+                    <option value="12G">12 GB</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="openEditConfirm()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-confirm-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Confirm Edit</h3>
+            <p class="modal-note">Are you sure you want to edit the server profile. Note- this action cannot be undone and can make or break the server, I'll suggest taking a backup before changing the server version.</p>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeEditConfirm()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmEditProfile()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-confirm-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Delete Profile</h3>
+            <p class="modal-note">Note- Server deletion cannot be undone.</p>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeDeleteConfirm()">Cancel</button>
+                <button class="btn btn-success" onclick="confirmDeleteProfile()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API = "http://localhost:8001";
         let ws = null;
@@ -1676,6 +1807,10 @@
         let activityIntervalId = null;
         let playersIntervalId = null;
         let aiFormSnapshot = null;
+        let profileCache = {};
+        let contextProfile = null;
+        let pendingEdit = null;
+        let pendingDelete = null;
 
             const PROVIDER_MODELS = {
                 groq: ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "llama-3.2-90b-vision-preview", "meta-llama/llama-4-scout-17b-16e-instruct", "mixtral-8x7b-32768"],
@@ -1919,6 +2054,11 @@
                 return (a.name || '').localeCompare(b.name || '');
             });
 
+            profileCache = {};
+            profiles.forEach(p => {
+                if (p && p.name) profileCache[p.name] = p;
+            });
+
             const grid = document.getElementById('profiles-grid');
             let html = `<div class="card create-card" onclick="showCreateModal()">
                 <div class="plus-circle"><i data-lucide="plus"></i></div>
@@ -1932,7 +2072,7 @@
                 const cardClass = isRunning ? '' : 'offline';
                 const statsText = isRunning ? 'Running' : 'Offline';
                 
-                return `<div class="card server-card ${cardClass}" onclick="launchServer('${p.name}', '${p.software || 'Not configured'}', '${p.version || ''}')">
+                return `<div class="card server-card ${cardClass}" onclick="launchServer('${p.name}', '${p.software || 'Not configured'}', '${p.version || ''}')" oncontextmenu="openProfileMenu(event, '${p.name}')">
                     <div class="card-status ${statusClass}">${statusText}</div>
                     <div class="card-body">
                         <h3>${p.name}</h3>
@@ -2036,6 +2176,148 @@
 
         function closeModal() {
             document.getElementById('create-modal').classList.add('hidden');
+        }
+
+        function ensureSelectOption(selectEl, value) {
+            if (!value || !selectEl) return;
+            const exists = Array.from(selectEl.options).some(opt => opt.value === value);
+            if (!exists) {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                selectEl.appendChild(option);
+            }
+        }
+
+        function openProfileMenu(e, name) {
+            e.preventDefault();
+            e.stopPropagation();
+            contextProfile = name;
+            const menu = document.getElementById('profile-context-menu');
+            if (!menu) return;
+            menu.classList.remove('hidden');
+            let x = e.clientX;
+            let y = e.clientY;
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+            const rect = menu.getBoundingClientRect();
+            const pad = 8;
+            if (x + rect.width > window.innerWidth) x = window.innerWidth - rect.width - pad;
+            if (y + rect.height > window.innerHeight) y = window.innerHeight - rect.height - pad;
+            menu.style.left = `${Math.max(pad, x)}px`;
+            menu.style.top = `${Math.max(pad, y)}px`;
+        }
+
+        function closeProfileMenu() {
+            const menu = document.getElementById('profile-context-menu');
+            if (menu) menu.classList.add('hidden');
+        }
+
+        function handleEditProfile() {
+            closeProfileMenu();
+            if (contextProfile) openEditModal(contextProfile);
+        }
+
+        function handleDeleteProfile() {
+            closeProfileMenu();
+            if (contextProfile) openDeleteConfirm(contextProfile);
+        }
+
+        function openEditModal(name) {
+            const profile = profileCache[name];
+            if (!profile) return;
+            const modal = document.getElementById('edit-modal');
+            modal.dataset.originalName = name;
+            document.getElementById('edit-profile-name').value = profile.name || '';
+            document.getElementById('edit-profile-software').value = profile.software || 'Not configured';
+            const versionSelect = document.getElementById('edit-profile-version');
+            ensureSelectOption(versionSelect, profile.version);
+            versionSelect.value = profile.version || versionSelect.value;
+            const ramSelect = document.getElementById('edit-profile-ram');
+            ensureSelectOption(ramSelect, profile.ram);
+            ramSelect.value = profile.ram || ramSelect.value;
+            modal.classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.add('hidden');
+        }
+
+        function openEditConfirm() {
+            const modal = document.getElementById('edit-modal');
+            const originalName = modal.dataset.originalName;
+            const name = document.getElementById('edit-profile-name').value.trim();
+            const version = document.getElementById('edit-profile-version').value;
+            const ram = document.getElementById('edit-profile-ram').value;
+            if (!name) return;
+            pendingEdit = { originalName, name, version, ram };
+            document.getElementById('edit-confirm-modal').classList.remove('hidden');
+        }
+
+        function closeEditConfirm() {
+            document.getElementById('edit-confirm-modal').classList.add('hidden');
+        }
+
+        async function confirmEditProfile() {
+            if (!pendingEdit) return;
+            closeEditConfirm();
+            try {
+                const res = await fetch(`${API}/profile/${encodeURIComponent(pendingEdit.originalName)}/edit`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: pendingEdit.name,
+                        version: pendingEdit.version,
+                        ram: pendingEdit.ram
+                    })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    alert(data.message || 'Failed to edit profile');
+                    return;
+                }
+                closeEditModal();
+                if (currentProfile === pendingEdit.originalName) {
+                    currentProfile = data.profile?.name || pendingEdit.name;
+                    document.getElementById('current-server-name').textContent = currentProfile;
+                }
+                loadProfiles();
+            } catch (e) {
+                alert('Failed to edit profile');
+            } finally {
+                pendingEdit = null;
+            }
+        }
+
+        function openDeleteConfirm(name) {
+            pendingDelete = name;
+            document.getElementById('delete-confirm-modal').classList.remove('hidden');
+        }
+
+        function closeDeleteConfirm() {
+            document.getElementById('delete-confirm-modal').classList.add('hidden');
+        }
+
+        async function confirmDeleteProfile() {
+            if (!pendingDelete) return;
+            try {
+                const res = await fetch(`${API}/profile/${encodeURIComponent(pendingDelete)}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (!data.success) {
+                    alert(data.message || 'Failed to delete profile');
+                    return;
+                }
+                if (currentProfile === pendingDelete) {
+                    currentProfile = null;
+                    document.getElementById('current-server-name').textContent = "Select Universe";
+                }
+                loadProfiles();
+                closeDeleteConfirm();
+            } catch (e) {
+                alert('Failed to delete profile');
+            } finally {
+                pendingDelete = null;
+            }
         }
 
         async function createProfile() {
@@ -2880,6 +3162,11 @@
         }
 
         // Init
+        document.addEventListener('click', closeProfileMenu);
+        document.addEventListener('contextmenu', (e) => {
+            if (!e.target.closest('.server-card')) closeProfileMenu();
+        });
+        document.getElementById('profile-context-menu')?.addEventListener('click', (e) => e.stopPropagation());
         setBackendConnected(false);
         loadProfiles();
         loadServerStats();

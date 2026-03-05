@@ -1,5 +1,7 @@
 import os
 import json
+import os
+import shutil
 
 BASE_DIR = "servers"
 
@@ -60,3 +62,29 @@ def update_profile(name, data):
             json.dump(config, f, indent=2)
         return config
     return None
+
+def rename_profile(old_name, new_name):
+    base = os.path.join(get_base_dir(), BASE_DIR)
+    old_path = os.path.join(base, old_name)
+    new_path = os.path.join(base, new_name)
+    if not os.path.exists(old_path):
+        return False, "Profile not found"
+    if os.path.exists(new_path):
+        return False, "Profile with new name already exists"
+    shutil.move(old_path, new_path)
+    config_path = os.path.join(new_path, "profile.json")
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            config = json.load(f)
+        config["name"] = new_name
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=2)
+    return True, None
+
+def delete_profile(name):
+    base = os.path.join(get_base_dir(), BASE_DIR)
+    path = os.path.join(base, name)
+    if not os.path.exists(path):
+        return False, "Profile not found"
+    shutil.rmtree(path)
+    return True, None
