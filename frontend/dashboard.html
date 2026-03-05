@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OVERSEER | Divine Minecraft AI</title>
+    <title>MCmadeEasy | Divine Minecraft AI</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
@@ -16,6 +16,12 @@
             --text-muted: #a1a1aa;
             --danger: #ef4444;
             --success: #10b981;
+        }
+
+        @font-face {
+            font-family: 'MinecraftTen';
+            src: url('assets/MinecraftTen-VGORe.ttf') format('truetype');
+            font-display: swap;
         }
 
         @keyframes spin {
@@ -59,17 +65,21 @@
         }
 
         .logo-mark {
-            width: 24px;
-            height: 24px;
-            background: var(--accent);
-            box-shadow: 0 0 15px var(--accent-glow);
-            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
         }
 
         .logo-text {
             font-weight: 700;
             letter-spacing: 2px;
             color: var(--accent);
+            font-family: 'MinecraftTen', 'Segoe UI', sans-serif;
+            font-size: 2rem;
+            margin-left: -6px;
+            position: relative;
+            top: -4px;
         }
 
         .server-status-pill {
@@ -845,9 +855,17 @@
         }
 
         .modal-note {
-            color: var(--text-muted);
+            color: var(--danger);
             font-size: 0.85rem;
             line-height: 1.4;
+            text-shadow: 0 0 8px rgba(239, 68, 68, 0.35);
+        }
+
+        .modal-confirm-title {
+            color: var(--text);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
         }
 
         .context-menu {
@@ -1189,8 +1207,8 @@
 <body class="state-profiles">
     <nav class="top-nav">
         <div class="nav-left" onclick="showProfiles()">
-            <div class="logo-mark"></div>
-            <span class="logo-text">OVERSEER</span>
+            <img class="logo-mark" src="assets/logo.png" alt="MCmadeEasy logo">
+            <span class="logo-text">MCmadeEasy</span>
         </div>
         <div class="nav-center">
             <div class="server-status-pill">
@@ -1776,7 +1794,8 @@
     <div id="edit-confirm-modal" class="modal hidden">
         <div class="modal-content">
             <h3>Confirm Edit</h3>
-            <p class="modal-note">Are you sure you want to edit the server profile. Note- this action cannot be undone and can make or break the server, I'll suggest taking a backup before changing the server version.</p>
+            <p class="modal-confirm-title">Are you sure you want to edit the server profile.</p>
+            <p class="modal-note">Note- this action cannot be undone and can make or break the server, I'll suggest taking a backup before changing the server version.</p>
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="closeEditConfirm()">Cancel</button>
                 <button class="btn btn-primary" onclick="confirmEditProfile()">Save</button>
@@ -1791,6 +1810,16 @@
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="closeDeleteConfirm()">Cancel</button>
                 <button class="btn btn-success" onclick="confirmDeleteProfile()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="action-blocked-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Action Blocked</h3>
+            <p class="modal-note">Sorry the action cannot be performed because the server is running</p>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="closeActionBlocked()">Ok</button>
             </div>
         </div>
     </div>
@@ -2215,12 +2244,32 @@
 
         function handleEditProfile() {
             closeProfileMenu();
-            if (contextProfile) openEditModal(contextProfile);
+            if (contextProfile) checkProfileActionAllowed(contextProfile, () => openEditModal(contextProfile));
         }
 
         function handleDeleteProfile() {
             closeProfileMenu();
-            if (contextProfile) openDeleteConfirm(contextProfile);
+            if (contextProfile) checkProfileActionAllowed(contextProfile, () => openDeleteConfirm(contextProfile));
+        }
+
+        async function checkProfileActionAllowed(name, onAllowed) {
+            try {
+                const res = await fetch(`${API}/status`);
+                const data = await res.json();
+                if (data.running && data.profile === name) {
+                    showActionBlocked();
+                    return;
+                }
+            } catch (e) {}
+            onAllowed();
+        }
+
+        function showActionBlocked() {
+            document.getElementById('action-blocked-modal').classList.remove('hidden');
+        }
+
+        function closeActionBlocked() {
+            document.getElementById('action-blocked-modal').classList.add('hidden');
         }
 
         function openEditModal(name) {

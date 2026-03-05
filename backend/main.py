@@ -106,7 +106,7 @@ async def edit_server_profile(name: str, request: Request):
         return {"success": False, "message": f"Profile '{name}' not found"}
     
     if server.is_running() and os.path.basename(server.current_profile) == name:
-        return {"success": False, "message": "Cannot edit a running server. Stop it first."}
+        return {"success": False, "message": "Sorry the action could not be performed because the server is running"}
     
     old_profile_path = get_profile_path(name)
     if new_name and new_name != name:
@@ -141,7 +141,7 @@ async def edit_server_profile(name: str, request: Request):
 @app.delete("/profile/{name}")
 def delete_server_profile(name: str):
     if server.is_running() and os.path.basename(server.current_profile) == name:
-        return {"success": False, "message": "Cannot delete a running server. Stop it first."}
+        return {"success": False, "message": "Sorry the action could not be performed because the server is running"}
     
     ok, err = delete_profile(name)
     if not ok:
