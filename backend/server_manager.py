@@ -127,7 +127,13 @@ class ServerManager:
         # Clear player cache
         self._players_cache = []
         self._players_cache_time = 0
+        # Clear console output
+        self.output_lines = []
         return True, "Server stopped"
+
+    def clear_output(self):
+        """Clear console output history"""
+        self.output_lines = []
 
     def send_command(self, cmd):
         if not self.is_running():

@@ -23,7 +23,7 @@ class AuditLogger:
         with open(self.current_log_file, "w") as f:
             json.dump(self.logs, f, indent=2)
     
-    def log(self, event_type, player, message, intent=None, command=None, success=True, metadata=None):
+    def log(self, event_type, player, message, intent=None, command=None, success=True, metadata=None, profile=None):
         entry = {
             "timestamp": time.time(),
             "datetime": datetime.now().isoformat(),
@@ -33,12 +33,29 @@ class AuditLogger:
             "intent": intent,
             "command": command,
             "success": success,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
+            "profile": profile
         }
         self.logs.append(entry)
         self.logs = self.logs[-1000:]
         self.save_logs()
+        
+        if profile:
+            self.save_profile_log(profile, entry)
+        
         return entry
+    
+    def save_profile_log(self, profile, entry):
+        profile_log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "servers", profile)
+        os.makedirs(profile_log_dir, exist_ok=True)
+        log_file = os.path.join(profile_log_dir, "activity.log")
+        
+        timestamp = entry.get("datetime", datetime.now().isoformat())
+        msg = entry.get("message", "")
+        log_line = f"[{timestamp}] {msg}\n"
+        
+        with open(log_file, "a") as f:
+            f.write(log_line)
     
     def log_command(self, player, message, intent, command, success=True):
         return self.log("command", player, message, intent, command, success)
@@ -52,7 +69,10 @@ class AuditLogger:
     def get_player_logs(self, player_name, limit=50):
         return [l for l in reversed(self.logs) if l.get("player") == player_name][-limit:]
     
-    def get_recent(self, limit=20):
+    def get_recent(self, limit=20, profile=None):
+        if profile:
+            filtered = [l for l in self.logs if l.get("profile") == profile]
+            return filtered[-limit:]
         return self.logs[-limit:]
     
     def search(self, query, limit=50):

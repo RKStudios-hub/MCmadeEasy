@@ -18,6 +18,14 @@
             --success: #10b981;
         }
 
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
@@ -1147,12 +1155,12 @@
                 <button class="menu-item" data-tab="hosting" onclick="switchTab('hosting')"><i data-lucide="globe"></i> Hosting</button>
             </nav>
             <div class="sidebar-footer">
-                <div id="server-status" class="status-indicator stopped">
+                <div id="server-status" class="status-indicator stopped" style="margin-bottom: 10px;">
                     <span class="status-dot"></span>
-                    <span id="status-text">Stopped</div>
-                </span>
+                    <span id="status-text">Stopped</span>
+                </div>
                 <button class="btn btn-primary" id="start-btn" onclick="startServer()"><i data-lucide="play"></i> Start Server</button>
-                <button class="btn btn-danger hidden" id="stop-btn" onclick="stopServer()"><i data-lucide="power"></i> Stop Server</button>
+                <button class="btn btn-danger" id="stop-btn" onclick="stopServer()" style="display: none;"><i data-lucide="power"></i> Stop Server</button>
             </div>
         </aside>
 
@@ -1894,6 +1902,8 @@
             document.getElementById('mods-menu-text').textContent = isPluginBased ? 'Plugins' : 'Mods';
             
             document.getElementById('profile-screen').classList.add('hidden');
+            document.getElementById('console-output').innerHTML = '';
+            lastLineCount = 0;
             setTimeout(() => {
                 document.getElementById('control-screen').classList.remove('hidden');
                 checkServerStatus();
@@ -2043,27 +2053,35 @@
 
         // Console
         async function connectConsole() {
-            // First fetch console history
+            // First check if this profile is running
+            try {
+                const statusRes = await fetch(`${API}/status`);
+                const statusData = await statusRes.json();
+                
+                if (!statusData.running || statusData.profile !== currentProfile) {
+                    if (statusData.running && statusData.profile !== currentProfile) {
+                        document.getElementById('console-output').innerHTML = `<div class="line warn">⚠ Another server is running: ${statusData.profile}</div>`;
+                    }
+                    return;
+                }
+            } catch (e) {
+                return;
+            }
+              
+            // Fetch console history
             try {
                 const res = await fetch(`${API}/console/history`);
                 const data = await res.json();
-                const historyLines = data.lines || [];
-                
-                const consoleDiv = document.getElementById('console-output');
-                consoleDiv.innerHTML = '';
-                
-                historyLines.forEach(line => {
-                    const cls = getLineClass(line);
-                    consoleDiv.innerHTML += `<div class="line ${cls}">${escapeHtml(line)}</div>`;
-                });
-                lastLineCount = historyLines.length;
-                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+                showConsoleHistory(data.lines || [], true);
             } catch (e) {
                 console.log('No console history available');
             }
             
             // Then connect for real-time updates
-            if (ws) return;
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
             
             ws = new WebSocket('ws://localhost:8001/console/ws');
             
@@ -2083,6 +2101,22 @@
                     consoleDiv.scrollTop = consoleDiv.scrollHeight;
                 }
             };
+        }
+
+        function showConsoleHistory(lines, clearFirst = false) {
+            const consoleDiv = document.getElementById('console-output');
+            
+            if (clearFirst) {
+                consoleDiv.innerHTML = '';
+            }
+            
+            // Append lines
+            lines.forEach(line => {
+                const cls = getLineClass(line);
+                consoleDiv.innerHTML += `<div class="line ${cls}">${escapeHtml(line)}</div>`;
+            });
+            lastLineCount = lines.length;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
         }
 
         function getLineClass(line) {
@@ -2146,43 +2180,163 @@
             if (!currentProfile) return;
             
             const startBtn = document.getElementById('start-btn');
-            startBtn.disabled = true;
-            startBtn.innerHTML = '<i data-lucide="loader"></i> Starting...';
-            lucide.createIcons();
+            const stopBtn = document.getElementById('stop-btn');
+            const statusEl = document.getElementById('server-status');
+            const statusText = document.getElementById('status-text');
+            
+            // Immediately show starting state
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'block';
+            stopBtn.disabled = true;
+            stopBtn.innerHTML = '<i data-lucide="loader"></i> Starting server...';
+            
+            statusEl.classList.remove('stopped');
+            statusEl.classList.add('running');
+            statusText.textContent = 'Starting...';
             
             try {
                 const res = await fetch(`${API}/start/${currentProfile}`, { method: 'POST' });
                 const data = await res.json();
                 
                 if (data.success) {
-                    alert(data.message || 'Server started!');
-                    updateServerStatus('running');
-                    connectConsole();
+                    await pollServerStart();
                 } else {
+                    startBtn.style.display = 'block';
+                    stopBtn.style.display = 'none';
+                    statusEl.classList.remove('running');
+                    statusEl.classList.add('stopped');
+                    statusText.textContent = 'Stopped';
                     alert('Failed to start: ' + (data.message || 'Unknown error'));
-                    startBtn.disabled = false;
-                    startBtn.innerHTML = '<i data-lucide="play"></i> Start Server';
-                    lucide.createIcons();
                 }
             } catch (e) {
+                startBtn.style.display = 'block';
+                stopBtn.style.display = 'none';
+                statusEl.classList.remove('running');
+                statusEl.classList.add('stopped');
+                statusText.textContent = 'Stopped';
                 alert('Error starting server: ' + e);
-                startBtn.disabled = false;
-                startBtn.innerHTML = '<i data-lucide="play"></i> Start Server';
-                lucide.createIcons();
             }
+        }
+
+        async function pollServerStart() {
+            const stopBtn = document.getElementById('stop-btn');
+            const statusEl = document.getElementById('server-status');
+            const statusText = document.getElementById('status-text');
+            const consoleDiv = document.getElementById('console-output');
+            
+            // Clear console and reset
+            consoleDiv.innerHTML = '';
+            lastLineCount = 0;
+            consoleDiv.innerHTML += '<div class="line info">⏳ Starting server...</div>';
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            
+            const maxAttempts = 120;
+            let attempts = 0;
+            let serverRunning = false;
+            
+            while (attempts < maxAttempts) {
+                await new Promise(r => setTimeout(r, 1000));
+                attempts++;
+                
+                try {
+                    const statusRes = await fetch(`${API}/status`);
+                    const statusData = await statusRes.json();
+                    
+                    if (statusData.running && statusData.profile === currentProfile) {
+                        if (!serverRunning) {
+                            // Server just started running - connect to WebSocket for real-time updates
+                            serverRunning = true;
+                            connectConsole();
+                        }
+                        
+                        // Check if console has "Done" message in displayed content
+                        const consoleText = consoleDiv.innerText || consoleDiv.textContent || '';
+                        if (consoleText.includes('Done') && consoleText.includes('help')) {
+                            updateServerStatus('running');
+                            return;
+                        }
+                        
+                        // Server running but not done yet
+                        statusText.textContent = 'Starting... (' + attempts + 's)';
+                        stopBtn.innerHTML = '<i data-lucide="loader"></i> Starting server... (' + attempts + 's)';
+                    } else if (statusData.running && statusData.profile !== currentProfile) {
+                        stopBtn.disabled = false;
+                        stopBtn.innerHTML = '<i data-lucide="power"></i> Stop Server';
+                        startBtn.style.display = 'block';
+                        stopBtn.style.display = 'none';
+                        statusEl.classList.remove('running');
+                        statusEl.classList.add('stopped');
+                        statusText.textContent = 'Stopped';
+                        alert('Another server is already running: ' + statusData.profile);
+                        return;
+                    }
+                } catch (e) {}
+                
+                stopBtn.innerHTML = '<i data-lucide="loader"></i> Starting server... (' + attempts + 's)';
+            }
+            
+            stopBtn.disabled = false;
+            stopBtn.innerHTML = '<i data-lucide="power"></i> Stop Server';
+            alert('Server may not have started properly. Please check console.');
         }
 
         async function stopServer() {
             const stopBtn = document.getElementById('stop-btn');
             stopBtn.disabled = true;
-            stopBtn.innerHTML = '<i data-lucide="loader"></i> Stopping...';
-            lucide.createIcons();
+            stopBtn.innerHTML = '<i data-lucide="loader"></i> Stopping server...';
+            
+            const consoleDiv = document.getElementById('console-output');
+            consoleDiv.innerHTML += '<div class="line warn">⏳ Stopping server...</div>';
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            
+            // Close WebSocket when stopping
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
             
             await fetch(`${API}/stop`, { method: 'POST' });
             
-            setTimeout(() => {
-                updateServerStatus('stopped');
-            }, 2000);
+            await pollServerStop();
+        }
+
+        async function pollServerStop() {
+            const stopBtn = document.getElementById('stop-btn');
+            const startBtn = document.getElementById('start-btn');
+            const statusEl = document.getElementById('server-status');
+            const statusText = document.getElementById('status-text');
+            const maxAttempts = 30;
+            let attempts = 0;
+            
+            while (attempts < maxAttempts) {
+                await new Promise(r => setTimeout(r, 1000));
+                attempts++;
+                
+                try {
+                    const statusRes = await fetch(`${API}/status`);
+                    const statusData = await statusRes.json();
+                    if (!statusData.running) {
+                        // Server stopped - reset everything
+                        if (ws) {
+                            ws.close();
+                            ws = null;
+                        }
+                        lastLineCount = 0;
+                        updateServerStatus('stopped');
+                        return;
+                    }
+                } catch (e) {}
+                
+                stopBtn.innerHTML = '<i data-lucide="loader"></i> Stopping server... (' + attempts + 's)';
+            }
+            
+            // Force stop if timeout
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            lastLineCount = 0;
+            updateServerStatus('stopped');
         }
 
         function updateServerStatus(status) {
@@ -2194,19 +2348,18 @@
             if (status === 'running') {
                 statusEl.classList.add('running');
                 statusText.textContent = 'Running';
-                startBtn.classList.add('hidden');
-                stopBtn.classList.remove('hidden');
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'block';
                 stopBtn.disabled = false;
                 stopBtn.innerHTML = '<i data-lucide="power"></i> Stop Server';
             } else {
                 statusEl.classList.remove('running');
                 statusText.textContent = 'Stopped';
-                startBtn.classList.remove('hidden');
-                stopBtn.classList.add('hidden');
+                startBtn.style.display = 'block';
+                stopBtn.style.display = 'none';
                 startBtn.disabled = false;
                 startBtn.innerHTML = '<i data-lucide="play"></i> Start Server';
             }
-            lucide.createIcons();
         }
 
         // Server Properties
@@ -2301,10 +2454,16 @@
             try {
                 const res = await fetch(`${API}/status`);
                 const data = await res.json();
-                if (data.running) {
+                
+                const isThisProfileRunning = data.running && data.profile === currentProfile;
+                
+                if (isThisProfileRunning) {
                     updateServerStatus('running');
                     loadServerStats();
                     loadPlayers();
+                } else if (data.running && data.profile !== currentProfile) {
+                    updateServerStatus('stopped');
+                    showOtherProfileRunning(data.profile);
                 } else {
                     updateServerStatus('stopped');
                 }
@@ -2312,9 +2471,20 @@
                 updateServerStatus('stopped');
             }
         }
+
+        function showOtherProfileRunning(runningProfile) {
+            document.getElementById('console-output').innerHTML = `<div class="line warn">⚠ Another server is running: ${runningProfile}</div>`;
+        }
         
         async function loadServerStats() {
             try {
+                const statusRes = await fetch(`${API}/status`);
+                const statusData = await statusRes.json();
+                
+                if (!statusData.running || statusData.profile !== currentProfile) {
+                    return;
+                }
+                
                 const res = await fetch(`${API}/server/stats`);
                 const stats = await res.json();
                 if (stats.running) {
@@ -2341,8 +2511,9 @@
         }
         
         async function loadActivity() {
+            if (!currentProfile) return;
             try {
-                const res = await fetch(`${API}/activity?limit=10`);
+                const res = await fetch(`${API}/activity?limit=10&profile=${encodeURIComponent(currentProfile)}`);
                 const activities = await res.json();
                 const container = document.getElementById('recent-activity');
                 
@@ -2387,6 +2558,16 @@
 
         async function loadPlayers() {
             try {
+                const statusRes = await fetch(`${API}/status`);
+                const statusData = await statusRes.json();
+                
+                if (!statusData.running || statusData.profile !== currentProfile) {
+                    document.getElementById('players-online-count').textContent = '0';
+                    document.getElementById('players-total-count').textContent = '0';
+                    document.getElementById('players-container').innerHTML = '<p style="color: var(--text-muted);">Server not running</p>';
+                    return;
+                }
+                
                 // Get all players who have ever joined
                 const allRes = await fetch(`${API}/players/all`);
                 const allData = await allRes.json();

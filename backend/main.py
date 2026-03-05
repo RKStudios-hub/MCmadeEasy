@@ -185,12 +185,15 @@ def start(name: str):
     if not os.path.exists(jar_path):
         return {"success": False, "message": "No server.jar found. Please download server software first using the Server Setup tab."}
     
+    # Clear console output when starting a new server
+    server.clear_output()
+    
     ram = profile.get("ram", "4G") if profile else "4G"
     software = profile.get("software", "paper")
     print(f"[START] Profile: {name}, Software: {software}, RAM: {ram}")
     success, msg = server.start(profile_path, ram, software)
     if success:
-        audit_logger.log("server_start", "system", f"Server '{name}' started with {ram} RAM", success=True)
+        audit_logger.log("server_start", "system", f"Server '{name}' started with {ram} RAM", success=True, profile=name)
     return {"success": success, "message": msg}
 
 @app.post("/stop")
@@ -198,12 +201,12 @@ def stop():
     profile = os.path.basename(server.current_profile) if server.current_profile else "unknown"
     success, msg = server.stop()
     if success:
-        audit_logger.log("server_stop", "system", f"Server '{profile}' stopped", success=True)
+        audit_logger.log("server_stop", "system", f"Server '{profile}' stopped", success=True, profile=profile)
     return {"success": success, "message": msg}
 
 @app.get("/activity")
-def get_activity(limit: int = 20):
-    logs = audit_logger.logs[-limit:]
+def get_activity(limit: int = 20, profile: str = None):
+    logs = audit_logger.get_recent(limit, profile)
     return [
         {
             "type": log.get("type", ""),
