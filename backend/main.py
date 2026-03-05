@@ -194,6 +194,7 @@ def start(name: str):
     success, msg = server.start(profile_path, ram, software)
     if success:
         audit_logger.log("server_start", "system", f"Server '{name}' started with {ram} RAM", success=True, profile=name)
+        update_profile(name, {"last_started": int(time.time())})
     return {"success": success, "message": msg}
 
 @app.post("/stop")

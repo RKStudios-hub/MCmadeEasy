@@ -92,10 +92,26 @@
             animation: pulse 2s infinite;
         }
 
+        .server-status-pill.offline .pulse {
+            background: var(--danger);
+            box-shadow: 0 0 10px var(--danger);
+            animation: pulse-danger 2s infinite;
+        }
+
+        .server-status-pill.offline #current-server-name {
+            color: var(--danger);
+        }
+
         @keyframes pulse {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        @keyframes pulse-danger {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
         .nav-right {
@@ -215,7 +231,8 @@
             font-weight: 700;
         }
 
-        .server-card.offline .card-status {
+        .server-card.offline .card-status,
+        .card-status.offline {
             background: rgba(239, 68, 68, 0.2);
             color: var(--danger);
         }
@@ -1864,28 +1881,68 @@
         lucide.createIcons();
 
         // Load profiles
+        function setBackendConnected(isConnected) {
+            const pill = document.querySelector('.server-status-pill');
+            if (!pill) return;
+            if (isConnected) {
+                pill.classList.remove('offline');
+            } else {
+                pill.classList.add('offline');
+            }
+        }
+
         async function loadProfiles() {
-            const res = await fetch(`${API}/profiles`);
-            const profiles = await res.json();
+            let profiles = [];
+            let isConnected = false;
+            try {
+                const res = await fetch(`${API}/profiles`);
+                profiles = await res.json();
+                isConnected = true;
+            } catch (e) {}
             
+            // Get server status
+            let statusData = { running: false, profile: null };
+            try {
+                const statusRes = await fetch(`${API}/status`);
+                statusData = await statusRes.json();
+                isConnected = true;
+            } catch (e) {}
+            
+            setBackendConnected(isConnected);
+            
+            const runningProfile = statusData.running ? statusData.profile : null;
+            
+            profiles.sort((a, b) => {
+                const aTime = Number(a.last_started || 0);
+                const bTime = Number(b.last_started || 0);
+                if (bTime !== aTime) return bTime - aTime;
+                return (a.name || '').localeCompare(b.name || '');
+            });
+
             const grid = document.getElementById('profiles-grid');
             let html = `<div class="card create-card" onclick="showCreateModal()">
                 <div class="plus-circle"><i data-lucide="plus"></i></div>
                 <h3>Create Server</h3>
             </div>`;
             
-            html += profiles.map(p => `
-                <div class="card server-card" onclick="launchServer('${p.name}', '${p.software || 'Not configured'}', '${p.version || ''}')">
-                    <div class="card-status">${p.software ? 'READY' : 'SETUP'}</div>
+            html += profiles.map(p => {
+                const isRunning = runningProfile === p.name;
+                const statusText = isRunning ? 'READY' : 'Offline';
+                const statusClass = isRunning ? '' : 'offline';
+                const cardClass = isRunning ? '' : 'offline';
+                const statsText = isRunning ? 'Running' : 'Offline';
+                
+                return `<div class="card server-card ${cardClass}" onclick="launchServer('${p.name}', '${p.software || 'Not configured'}', '${p.version || ''}')">
+                    <div class="card-status ${statusClass}">${statusText}</div>
                     <div class="card-body">
                         <h3>${p.name}</h3>
                         <p>${p.software || 'Not configured'} ${p.version || ''}</p>
                     </div>
                     <div class="card-stats">
-                        <span><i data-lucide="server"></i> ${p.software ? 'Ready' : 'Setup'}</span>
+                        <span><i data-lucide="server"></i> ${statsText}</span>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
             
             grid.innerHTML = html;
             lucide.createIcons();
@@ -2823,6 +2880,7 @@
         }
 
         // Init
+        setBackendConnected(false);
         loadProfiles();
         loadServerStats();
         loadActivity();
