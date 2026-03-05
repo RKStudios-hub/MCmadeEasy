@@ -163,7 +163,7 @@ button:hover{
 }
 #pagination{
   position:fixed;
-  bottom:0;
+  bottom:-16px;
   left:0;
   right:0;
   display:flex;
@@ -268,7 +268,7 @@ button:hover{
   position:relative !important;
 }
 .card-installed::after{
-  content:'✓';
+  content:'\2713';
   position:absolute;
   top:8px;
   right:8px;
@@ -369,11 +369,11 @@ function onContentTypeChange() {
   searchProjects();
 }
 
+document.getElementById('contentType').value = getDefaultContentType();
 if(serverVersion){
   document.getElementById('mcversion').value = serverVersion;
-  document.getElementById('contentType').value = getDefaultContentType();
-  updateServerInfo();
 }
+updateServerInfo();
 
 async function searchProjects(){
   currentPage=1;
@@ -431,10 +431,16 @@ async function loadProjects(){
     } catch(e){}
   }
 
-  const installedNames = installedMods.map(m => m.name.toLowerCase());
-
+  const normalize = (s) => (s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+  const installedTokens = installedMods.flatMap(m => [
+    normalize(m.name),
+    normalize(m.file)
+  ]).filter(Boolean);
   data.hits.forEach(mod=>{
-    const isInstalled = installedNames.some(name => mod.title.toLowerCase().includes(name) || name.includes(mod.title.toLowerCase()));
+    const modKey = normalize(mod.slug || mod.title);
+    const isInstalled = installedTokens.some(token => token.includes(modKey) || modKey.includes(token));
     const card=document.createElement("div");
     card.className="card" + (isInstalled ? " card-installed" : "");
     card.style.cssText = "position:relative;" + (isInstalled ? "border-color:#10b981;" : "");
@@ -588,3 +594,5 @@ if(serverVersion){
 
 </body>
 </html>
+
+

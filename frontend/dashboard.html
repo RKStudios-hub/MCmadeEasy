@@ -55,6 +55,7 @@
             border-bottom: 1px solid var(--border);
             backdrop-filter: blur(10px);
             background: rgba(5, 5, 5, 0.9);
+            position: relative;
         }
 
         .nav-left {
@@ -62,6 +63,15 @@
             align-items: center;
             gap: 12px;
             cursor: pointer;
+            flex: 0 0 auto;
+        }
+
+        .nav-center {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
         }
 
         .logo-mark {
@@ -74,12 +84,14 @@
         .logo-text {
             font-weight: 700;
             letter-spacing: 2px;
-            color: var(--accent);
             font-family: 'MinecraftTen', 'Segoe UI', sans-serif;
             font-size: 2rem;
             margin-left: -6px;
             position: relative;
             top: -4px;
+            background: linear-gradient(135deg, var(--text), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .server-status-pill {
@@ -128,6 +140,7 @@
             display: flex;
             align-items: center;
             gap: 16px;
+            flex: 0 0 auto;
         }
 
         .icon-btn {
