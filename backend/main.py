@@ -18,7 +18,7 @@ from downloader import (
     get_latest_forge_version,
     get_neoforge_versions, get_neoforge_builds, download_neoforge,
     get_latest_neoforge_version,
-    get_fabric_versions, download_fabric_mc
+    get_fabric_mc_versions, download_fabric_mc
 )
 from server_manager import ServerManager
 import ai_engine
@@ -124,7 +124,7 @@ def download_server(name: str, software: str, version: str, build: str = None):
     elif software == "neoforge":
         return {"success": False, "message": "NeoForge requires manual download. Download from maven.neoforged.net and place server.jar in the server folder."}
     elif software == "fabric":
-        return {"success": False, "message": "Fabric requires manual download. Download from fabricmc.net and place server.jar in the server folder."}
+        success, msg = download_fabric_mc(version, profile_path)
     elif software == "quilt":
         return {"success": False, "message": "Quilt requires manual download. Use Paper or Purpur instead."}
     elif software == "leaf":
@@ -147,7 +147,7 @@ def versions(software: str):
     elif software == "paper":
         return get_paper_versions()
     elif software == "fabric":
-        return get_fabric_versions()
+        return get_fabric_mc_versions()
     return []
 
 @app.get("/paper/{version}/builds")

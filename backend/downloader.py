@@ -68,11 +68,12 @@ def download_paper(version, build, path):
         return False, str(e)
     return False, "Download failed"
 
-def get_fabric_versions():
+def get_fabric_mc_versions():
     url = "https://meta.fabricmc.net/v2/versions"
     try:
         resp = requests.get(url, timeout=10)
-        return resp.json()
+        data = resp.json()
+        return [v["version"] for v in data.get("game", []) if v.get("stable")]
     except Exception:
         return []
 
@@ -100,22 +101,62 @@ def get_fabric_loader_version(mc_version):
         pass
     return None, None
 
-def download_fabric_mc(version, path):
+def get_fabric_installer_version():
+    url = "https://meta.fabricmc.net/v2/versions/installer"
     try:
-        resp = requests.get(f"https://meta.fabricmc.net/v2/versions/loader/{version}", timeout=10)
+        resp = requests.get(url, timeout=10)
         data = resp.json()
         if data:
-            loader_ver = data[0]["loader"]["version"]
-            url = f"https://meta.fabricmc.net/v2/versions/loader/{version}/{loader_ver}/server/jar"
-            resp = requests.get(url, timeout=60)
-            if resp.status_code == 200:
-                jar_path = os.path.join(path, "server.jar")
-                with open(jar_path, "wb") as f:
-                    f.write(resp.content)
-                return True, "Downloaded"
+            stable = next((v for v in data if v.get("stable")), None)
+            if stable:
+                return stable["version"]
+            return data[0]["version"]
+    except Exception as e:
+        print(f"Error getting Fabric installer version: {e}")
+    return None
+
+def get_fabric_versions():
+    url = "https://meta.fabricmc.net/v2/versions"
+    try:
+        resp = requests.get(url, timeout=10)
+        data = resp.json()
+        return [v["version"] for v in data.get("game", []) if v.get("stable")]
+    except Exception:
+        return []
+
+def get_fabric_loader_versions(mc_version):
+    url = f"https://meta.fabricmc.net/v2/versions/loader/{mc_version}"
+    try:
+        resp = requests.get(url, timeout=10)
+        data = resp.json()
+        return [{"loader": v["loader"]["version"], "installer": v["version"]} for v in data]
+    except Exception:
+        return []
+
+def download_fabric_mc(version, path):
+    try:
+        installer_ver = get_fabric_installer_version()
+        if not installer_ver:
+            return False, "Could not get installer version"
+        
+        url = f"https://meta.fabricmc.net/v2/versions/loader/{version}"
+        resp = requests.get(url, timeout=10)
+        data = resp.json()
+        if not data:
+            return False, "No loader versions available"
+        
+        loader_ver = data[0]["loader"]["version"]
+        url = f"https://meta.fabricmc.net/v2/versions/loader/{version}/{loader_ver}/{installer_ver}/server/jar"
+        resp = requests.get(url, timeout=60)
+        if resp.status_code == 200:
+            jar_path = os.path.join(path, "server.jar")
+            with open(jar_path, "wb") as f:
+                f.write(resp.content)
+            return True, "Downloaded"
+        else:
+            return False, f"Download failed (HTTP {resp.status_code})"
     except Exception as e:
         return False, str(e)
-    return False, "Download failed"
 
 def get_forge_versions():
     try:
