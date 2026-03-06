@@ -6,13 +6,13 @@
         "api_key": "",
         "vision_provider": "groq",
         "vision_model": "meta-llama/llama-4-scout-17b-16e-instruct",
-        "vision_api_key": "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",
+        "vision_api_key": "",
         "model": "llama-3.1-8b-instant",
         "api_key_secondary": "",
         "model_secondary": "llama-3.1-8b-instant",
         "providers": {
             "groq": {
-                "api_key": "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",
+                "api_key": "",
                 "models": [
                     "llama-3.1-8b-instant",
                     "llama-3.3-70b-versatile",
