@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCmadeEasy | Divine Minecraft AI</title>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
         :root {
             --bg: #050505;
@@ -461,6 +462,16 @@
             color: var(--text-muted);
         }
 
+        .settings-group.glass {
+            transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+        }
+
+        .settings-group.glass:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+        }
+
         .input-row {
             margin-bottom: 16px;
         }
@@ -569,6 +580,195 @@
             background: white;
         }
 
+        .backup-layout {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .backup-history-card {
+            grid-column: 1 / -1;
+        }
+
+        .backup-section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            color: var(--text-muted);
+        }
+
+        .field-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 400;
+            margin-bottom: 8px;
+        }
+
+        .field-help {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            color: var(--text-muted);
+            font-size: 11px;
+            cursor: help;
+            margin-left: 2px;
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+
+        .field-help:hover {
+            transform: translateY(-1px);
+            color: var(--text);
+        }
+
+        .help-icon {
+            width: 12px;
+            height: 12px;
+            display: block;
+        }
+
+        .field-help .help-tip {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 125%;
+            min-width: 220px;
+            max-width: 280px;
+            background: rgba(16, 16, 16, 0.96);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.35;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.22s ease, transform 0.22s ease;
+            z-index: 20;
+            pointer-events: none;
+            text-align: left;
+        }
+
+        .field-help:hover .help-tip {
+            visibility: visible;
+            opacity: 1;
+            transform: translateX(-50%) translateY(-2px);
+        }
+
+        .provider-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(110px, 1fr));
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .provider-chip {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+
+        .provider-chip input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .provider-plaque {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 92px;
+            padding: 12px 10px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            transition: transform 0.24s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.24s ease, border-color 0.24s ease, background-color 0.24s ease;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text);
+        }
+
+        .provider-chip:hover .provider-plaque {
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateY(-1px);
+        }
+
+        .provider-chip input[type="checkbox"]:checked + .provider-plaque {
+            border-color: rgba(139, 92, 246, 0.9);
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25) inset, 0 0 16px rgba(139, 92, 246, 0.25);
+            background: rgba(139, 92, 246, 0.12);
+        }
+
+        .provider-chip input[type="checkbox"]:checked + .provider-plaque::after {
+            content: "Selected";
+            font-size: 10px;
+            color: var(--accent);
+        }
+
+        .provider-logo {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+        }
+
+        .provider-fa {
+            font-size: 22px;
+            line-height: 1;
+        }
+
+        @media (max-width: 720px) {
+            .provider-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .backup-history-list {
+            max-height: 390px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .backup-login-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2500;
+        }
+
+        .backup-login-card {
+            width: min(560px, 92vw);
+            background: rgba(15, 15, 15, 0.98);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px;
+        }
+
+        .backup-login-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        @media (max-width: 1200px) {
+            .backup-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
         textarea {
             width: 100%;
             height: 150px;
@@ -619,6 +819,43 @@
         .btn-danger:hover {
             background: var(--danger);
             color: white;
+        }
+
+        .btn-icon {
+            width: 14px;
+            height: 14px;
+        }
+
+        .icon-spin {
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes icon-pulse {
+            0% { transform: scale(1); opacity: 0.85; }
+            50% { transform: scale(1.18); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.85; }
+        }
+
+        .icon-pulse {
+            animation: icon-pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes icon-wiggle {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(-12deg); }
+            50% { transform: rotate(8deg); }
+            75% { transform: rotate(-6deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        .remove-ico {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.2s ease;
+        }
+
+        .btn-danger:hover .remove-ico {
+            animation: icon-wiggle 0.35s ease;
         }
 
         .btn-secondary {
@@ -689,6 +926,9 @@
             font-size: 12px;
             line-height: 1.6;
             margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
 
         .console-output .line { margin-bottom: 2px; }
@@ -699,6 +939,206 @@
         .console-output .chat { color: #e879f9; }
         .console-output .player { color: #a78bfa; }
         .console-output .default { color: #cbd5e1; }
+
+        .console-output .chat-message {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(18, 18, 18, 0.9);
+            max-width: 92%;
+            position: relative;
+        }
+
+        .console-output .chat-message.player-chat {
+            border-left: 3px solid var(--player-accent, #22d3ee);
+            background: var(--player-bg, rgba(34, 211, 238, 0.08));
+        }
+
+        .console-output .chat-message.ai-chat {
+            border-left: 3px solid #c084fc;
+            background: rgba(192, 132, 252, 0.12);
+        }
+
+        .console-output .chat-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 8px;
+            image-rendering: pixelated;
+            flex-shrink: 0;
+            animation: head-float 2.6s ease-in-out infinite;
+            filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.4));
+            background: #111827;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .console-output .chat-avatar.player-avatar {
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
+        }
+
+        .console-output .chat-avatar.ai-avatar {
+            box-shadow: 0 0 12px rgba(192, 132, 252, 0.45);
+        }
+
+        .console-output .chat-content {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: nowrap;
+            min-width: 0;
+        }
+
+        .console-output .chat-name {
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+
+        .console-output .chat-text {
+            color: #e2e8f0;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        @keyframes head-float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-4px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .ai-settings .settings-grid {
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 22px;
+        }
+
+        .ai-settings .settings-group {
+            border: 1px solid var(--border);
+            background: var(--card);
+            box-shadow: none;
+        }
+
+        .ai-settings .settings-group h3 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            color: var(--text-muted);
+        }
+
+        .ai-settings .input-row {
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            padding: 0;
+            margin-bottom: 16px;
+        }
+
+        .ai-settings .input-row label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .ai-settings input,
+        .ai-settings select,
+        .ai-settings textarea {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .ai-settings textarea {
+            min-height: 160px;
+            line-height: 1.5;
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .op-tools {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .op-tools .op-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .op-tools .op-row input {
+            min-width: 220px;
+            flex: 1;
+        }
+
+        .op-tools .op-status {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .operators-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .operator-entry {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .operator-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .operator-head {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            object-fit: cover;
+            image-rendering: pixelated;
+            background: #111827;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            flex-shrink: 0;
+        }
+
+        .operator-name {
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .operator-remove {
+            margin-left: auto;
+            padding: 0;
+            font-size: 0.78rem;
+            width: 30px !important;
+            min-width: 30px !important;
+            height: 30px;
+            flex: 0 0 30px;
+            justify-content: center;
+        }
 
         .command-input {
             display: flex;
@@ -1106,7 +1546,7 @@
             width: 90%;
             max-width: 700px;
             max-height: 80vh;
-            overflow-y: auto;
+            overflow: hidden;
         }
 
         .inventory-header {
@@ -1152,7 +1592,8 @@
         }
 
         .inventory-slot {
-            aspect-ratio: 1;
+            width: var(--inv-slot-size, 42px);
+            height: var(--inv-slot-size, 42px);
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 4px;
@@ -1208,6 +1649,107 @@
         .inventory-close {
             margin-top: 20px;
             width: 100%;
+        }
+
+        .inventory-layout {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 14px;
+            align-items: start;
+            --inv-slot-size: 48px;
+            margin-left: -5px;
+        }
+
+        .inventory-armor,
+        .inventory-offhand {
+            display: grid;
+            gap: 6px;
+            padding: 8px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            justify-items: center;
+        }
+
+        .inventory-offhand {
+            align-self: center;
+        }
+
+        .inventory-main {
+            display: grid;
+            grid-template-columns: repeat(9, var(--inv-slot-size));
+            gap: 4px;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .inventory-hotbar {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(9, var(--inv-slot-size));
+            gap: 4px;
+            margin-top: 12px;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .inventory-section-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .gm-select {
+            background: rgba(8, 8, 12, 0.8);
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            border-radius: 8px;
+            color: #f8fafc;
+            font-size: 0.8rem;
+            padding: 6px 10px;
+            min-width: 140px;
+            box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+        }
+
+        .player-entry-meta .gm-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .gm-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: nowrap;
+            margin-top: 8px;
+        }
+
+        .gm-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .gm-actions {
+            display: inline-flex;
+            gap: 8px;
+        }
+
+        .gm-actions .btn {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            min-width: 88px;
+            justify-content: center;
+        }
+
+        .gm-select {
+            min-width: 140px;
+            height: 32px;
+        }
+
+        .gm-label {
+            min-width: 44px;
         }
 
         .empty-inventory {
@@ -1295,6 +1837,18 @@
                     <h3 style="margin-bottom: 12px;">Recent Activity</h3>
                     <div id="recent-activity" style="max-height: 200px; overflow-y: auto;">
                         <p style="color: var(--text-muted);">No recent activity</p>
+                    </div>
+                </div>
+
+                <div class="glass op-tools" style="margin-top: 20px;">
+                    <h3 style="margin-bottom: 12px;">Operator Tools</h3>
+                    <div class="op-row">
+                        <input type="text" id="op-player" placeholder="Player name (exact)">
+                        <button class="btn btn-primary" onclick="addOperator()"><i data-lucide="user-plus"></i> Add Operator</button>
+                    </div>
+                    <p class="op-status" id="op-status"></p>
+                    <div id="operators-list" class="operators-list">
+                        <p style="color: var(--text-muted);">No operators found.</p>
                     </div>
                 </div>
 
@@ -1425,7 +1979,7 @@
             </div>
 
             <!-- AI Settings Tab -->
-            <div id="tab-ai" class="tab-content hidden">
+            <div id="tab-ai" class="tab-content hidden ai-settings">
                 <div class="settings-grid">
                     <div class="settings-group glass">
                         <h3>API Keys & Provider</h3>
@@ -1599,6 +2153,20 @@
                         <div class="inventory-header-info">
                             <h3 id="modal-player-name">Player Name</h3>
                             <div class="player-status" id="modal-player-status"></div>
+                            <div class="gm-row">
+                                <span class="gm-label">Mode</span>
+                                <select id="modal-gamemode" class="gm-select" onchange="setPlayerGamemode(document.getElementById('modal-player-name').textContent, this.value)">
+                                    <option value="survival">Survival</option>
+                                    <option value="creative">Creative</option>
+                                    <option value="adventure">Adventure</option>
+                                    <option value="spectator">Spectator</option>
+                                </select>
+                                <div class="gm-actions">
+                                    <button class="btn btn-secondary" onclick="makeOperator()">Make Op</button>
+                                    <button class="btn btn-success" onclick="healPlayer()">Heal</button>
+                                    <button class="btn btn-danger" onclick="killPlayer()">Kill</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="inventory-grid" id="modal-inventory-grid"></div>
@@ -1613,26 +2181,116 @@
 
             <!-- Backup Tab -->
             <div id="tab-backup" class="tab-content hidden">
-                <div class="settings-grid">
+                <div class="backup-layout">
                     <div class="settings-group glass">
-                        <h3><i data-lucide="cloud"></i> Google Drive Backup</h3>
+                        <h3 class="backup-section-title"><i data-lucide="archive"></i> Manual Backup</h3>
+                        <div class="input-row">
+                            <label class="field-label">Backup Name (optional)
+                                <span class="field-help"><svg class="help-icon" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM224 224a32 32 0 1 1 64 0l0 160a32 32 0 1 1-64 0l0-160zm32-96a40 40 0 1 1 0 80 40 40 0 1 1 0-80z"/></svg><span class="help-tip">If empty, name auto-generates: servername_date_number.</span></span>
+                            </label>
+                            <input type="text" id="backup-name" placeholder="Leave empty: servername_date_number">
+                        </div>
+                        <div class="input-row">
+                            <label class="field-label">Backup Type
+                                <span class="field-help"><svg class="help-icon" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM224 224a32 32 0 1 1 64 0l0 160a32 32 0 1 1-64 0l0-160zm32-96a40 40 0 1 1 0 80 40 40 0 1 1 0-80z"/></svg><span class="help-tip">Choose what to archive: full profile folder or only world folders.</span></span>
+                            </label>
+                            <select id="backup-type">
+                                <option value="full_server">Full Server Folder</option>
+                                <option value="world">World Only</option>
+                            </select>
+                        </div>
+                        <div class="input-row">
+                            <label class="field-label">Cloud Providers
+                                <span class="field-help"><svg class="help-icon" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM224 224a32 32 0 1 1 64 0l0 160a32 32 0 1 1-64 0l0-160zm32-96a40 40 0 1 1 0 80 40 40 0 1 1 0-80z"/></svg><span class="help-tip">Pick one or multiple providers. Backup uploads to all selected services.</span></span>
+                            </label>
+                            <div class="provider-grid">
+                                <label class="provider-chip">
+                                    <input type="checkbox" id="provider-google" checked>
+                                    <span class="provider-plaque">
+                                        <i class="fa-brands fa-google-drive provider-fa" style="color:#0F9D58" aria-hidden="true"></i>
+                                        <span>Google Drive</span>
+                                    </span>
+                                </label>
+                                <label class="provider-chip">
+                                    <input type="checkbox" id="provider-dropbox">
+                                    <span class="provider-plaque">
+                                        <i class="fa-brands fa-dropbox provider-fa" style="color:#0061FF" aria-hidden="true"></i>
+                                        <span>Dropbox</span>
+                                    </span>
+                                </label>
+                                <label class="provider-chip">
+                                    <input type="checkbox" id="provider-onedrive">
+                                    <span class="provider-plaque">
+                                        <i class="fa-solid fa-cloud provider-fa" style="color:#0078D4" aria-hidden="true"></i>
+                                        <span>OneDrive</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="createBackup()"><i data-lucide="download"></i> Create Backup</button>
+                    </div>
+                    <div class="settings-group glass">
+                        <h3 class="backup-section-title"><i data-lucide="repeat"></i> Auto Backup</h3>
                         <div class="toggle-row">
-                            <label>Enable Auto Backup</label>
+                            <label class="field-label" style="margin:0;">Enable Auto Backup
+                                <span class="field-help"><svg class="help-icon" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM224 224a32 32 0 1 1 64 0l0 160a32 32 0 1 1-64 0l0-160zm32-96a40 40 0 1 1 0 80 40 40 0 1 1 0-80z"/></svg><span class="help-tip">Turns on scheduled backups for this profile.</span></span>
+                            </label>
                             <input type="checkbox" id="auto-backup-toggle" class="toggle">
                         </div>
                         <div class="input-row">
-                            <label>Backup Interval (hours)</label>
-                            <input type="number" id="backup-interval" min="1" max="168" value="24">
+                            <label class="field-label">Type of Backup
+                                <span class="field-help"><svg class="help-icon" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM224 224a32 32 0 1 1 64 0l0 160a32 32 0 1 1-64 0l0-160zm32-96a40 40 0 1 1 0 80 40 40 0 1 1 0-80z"/></svg><span class="help-tip">Backup content used by automatic backups.</span></span>
+                            </label>
+                            <select id="auto-backup-type">
+                                <option value="full_server">Full Server Folder</option>
+                                <option value="world">World Only</option>
+                            </select>
                         </div>
                         <div class="input-row">
-                            <label>Max Backups to Keep</label>
-                            <input type="number" id="max-backups" min="1" max="50" value="10">
+                            <label class="field-label">Backup Interval (hours)
+                                <span class="field-help"><svg class="help-icon" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM224 224a32 32 0 1 1 64 0l0 160a32 32 0 1 1-64 0l0-160zm32-96a40 40 0 1 1 0 80 40 40 0 1 1 0-80z"/></svg><span class="help-tip">Automatic timed backup interval. Example: 24 = once per day.</span></span>
+                            </label>
+                            <input type="number" id="backup-interval" min="1" max="720" value="24">
                         </div>
-                        <button class="btn btn-primary" onclick="createBackup()"><i data-lucide="download"></i> Create Backup Now</button>
+                        <div class="input-row">
+                            <label class="field-label">Backup On Stop Cycle
+                                <span class="field-help"><svg class="help-icon" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM224 224a32 32 0 1 1 64 0l0 160a32 32 0 1 1-64 0l0-160zm32-96a40 40 0 1 1 0 80 40 40 0 1 1 0-80z"/></svg><span class="help-tip">Creates backup after this many server stop events.</span></span>
+                            </label>
+                            <input type="number" id="backup-on-stop-count" min="1" max="1000" value="10">
+                        </div>
+                        <div class="input-row">
+                            <label class="field-label">Auto Backup Providers
+                                <span class="field-help"><svg class="help-icon" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM224 224a32 32 0 1 1 64 0l0 160a32 32 0 1 1-64 0l0-160zm32-96a40 40 0 1 1 0 80 40 40 0 1 1 0-80z"/></svg><span class="help-tip">Providers used by scheduled and stop-cycle backups.</span></span>
+                            </label>
+                            <div class="provider-grid">
+                                <label class="provider-chip">
+                                    <input type="checkbox" id="auto-provider-google" checked>
+                                    <span class="provider-plaque">
+                                        <i class="fa-brands fa-google-drive provider-fa" style="color:#0F9D58" aria-hidden="true"></i>
+                                        <span>Google Drive</span>
+                                    </span>
+                                </label>
+                                <label class="provider-chip">
+                                    <input type="checkbox" id="auto-provider-dropbox">
+                                    <span class="provider-plaque">
+                                        <i class="fa-brands fa-dropbox provider-fa" style="color:#0061FF" aria-hidden="true"></i>
+                                        <span>Dropbox</span>
+                                    </span>
+                                </label>
+                                <label class="provider-chip">
+                                    <input type="checkbox" id="auto-provider-onedrive">
+                                    <span class="provider-plaque">
+                                        <i class="fa-solid fa-cloud provider-fa" style="color:#0078D4" aria-hidden="true"></i>
+                                        <span>OneDrive</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" onclick="saveBackupSettings()"><i data-lucide="save"></i> Save Auto Backup Settings</button>
                     </div>
-                    <div class="settings-group glass">
-                        <h3>Backup History</h3>
-                        <div id="backup-history-list">
+                    <div class="settings-group glass backup-history-card">
+                        <h3 class="backup-section-title"><i data-lucide="history"></i> Backup History</h3>
+                        <div id="backup-history-list" class="backup-history-list">
                             <p style="color: var(--text-muted);">No backups yet</p>
                         </div>
                     </div>
@@ -1837,6 +2495,19 @@
         </div>
     </div>
 
+    <div id="backup-login-modal" class="backup-login-modal hidden">
+        <div class="backup-login-card">
+            <h3 style="margin-bottom:10px;"><i data-lucide="shield-alert"></i> Cloud Login Required</h3>
+            <p id="backup-login-text" style="color: var(--text-muted); margin-bottom: 6px;">
+                You must login to selected cloud providers to create backups.
+            </p>
+            <div id="backup-login-actions" class="backup-login-actions"></div>
+            <div style="display:flex; justify-content:flex-end; margin-top:14px;">
+                <button class="btn btn-secondary" onclick="closeBackupLoginModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API = "http://localhost:8001";
         let ws = null;
@@ -1853,6 +2524,8 @@
         let contextProfile = null;
         let pendingEdit = null;
         let pendingDelete = null;
+        let currentAiName = 'Ava';
+        let lastConsoleLine = '';
 
             const PROVIDER_MODELS = {
                 groq: ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "llama-3.2-90b-vision-preview", "meta-llama/llama-4-scout-17b-16e-instruct", "mixtral-8x7b-32768"],
@@ -1899,17 +2572,16 @@
             try {
                 const res = await fetch(`${API}/config`);
                 const config = await res.json();
+                const setValue = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = val;
+                };
+                const setChecked = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.checked = val;
+                };
                 
                 if (config.ai) {
-                    const setValue = (id, val) => {
-                        const el = document.getElementById(id);
-                        if (el) el.value = val;
-                    };
-                    const setChecked = (id, val) => {
-                        const el = document.getElementById(id);
-                        if (el) el.checked = val;
-                    };
-                    
                     setValue('api-key-groq', config.ai.providers?.groq?.api_key || '');
                     setValue('api-key-openai', config.ai.providers?.openai?.api_key || '');
                     setValue('api-key-anthropic', config.ai.providers?.anthropic?.api_key || '');
@@ -1922,6 +2594,7 @@
                     setValue('ai-model', config.ai.model || 'llama-3.1-8b-instant');
                     setValue('ai-mode', config.ai.mode || 'auto-safe');
                     setValue('ai-name', config.ai.ai_name || 'Ava');
+                    currentAiName = config.ai.ai_name || 'Ava';
                     setValue('ai-prompt', config.ai.system_prompt || '');
                     setValue('vision-provider', config.ai.vision_provider || config.ai.provider || 'groq');
                     setValue('vision-api-key', config.ai.vision_api_key || '');
@@ -2147,6 +2820,7 @@
                 document.getElementById('control-screen').classList.remove('hidden');
                 checkServerStatus();
                 startLiveStats();
+                loadOperators();
                 if (ws) {
                     ws.close();
                     ws = null;
@@ -2177,6 +2851,7 @@
             if (tabId === 'overview') {
                 loadServerStats();
                 loadActivity();
+                loadOperators();
                 if (currentProfile) {
                     loadServerProperties();
                 }
@@ -2198,7 +2873,10 @@
                 const browserFile = isPluginBased ? 'plugin-browser.html' : 'mod-browser.html';
                 document.getElementById('mod-browser-frame').src = `${browserFile}?version=${encodeURIComponent(version)}&profile=${encodeURIComponent(profile)}&software=${encodeURIComponent(software)}`;
             }
-            if (tabId === 'backup') loadBackupHistory();
+            if (tabId === 'backup') {
+                loadBackupSettings();
+                loadBackupHistory();
+            }
             if (tabId === 'grief') loadGriefStatus();
             if (tabId === 'hosting') loadHostingStatus();
             if (tabId === 'players') {
@@ -2492,13 +3170,33 @@
                 
                 const consoleDiv = document.getElementById('console-output');
                 
+                if (lines.length < lastLineCount) {
+                    consoleDiv.innerHTML = '';
+                    lines.forEach(line => consoleDiv.insertAdjacentHTML('beforeend', renderConsoleLine(line)));
+                    lastLineCount = lines.length;
+                    lastConsoleLine = lines[lines.length - 1] || '';
+                    consoleDiv.scrollTop = consoleDiv.scrollHeight;
+                    return;
+                }
+
+                if (lines.length === lastLineCount) {
+                    const tail = lines[lines.length - 1] || '';
+                    if (tail && tail !== lastConsoleLine) {
+                        consoleDiv.innerHTML = '';
+                        lines.forEach(line => consoleDiv.insertAdjacentHTML('beforeend', renderConsoleLine(line)));
+                        lastConsoleLine = tail;
+                        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+                    }
+                    return;
+                }
+
                 if (lines.length > lastLineCount) {
                     const newLines = lines.slice(lastLineCount);
                     newLines.forEach(line => {
-                        const cls = getLineClass(line);
-                        consoleDiv.innerHTML += `<div class="line ${cls}">${escapeHtml(line)}</div>`;
+                        consoleDiv.insertAdjacentHTML('beforeend', renderConsoleLine(line));
                     });
                     lastLineCount = lines.length;
+                    lastConsoleLine = lines[lines.length - 1] || '';
                     consoleDiv.scrollTop = consoleDiv.scrollHeight;
                 }
             };
@@ -2513,10 +3211,10 @@
             
             // Append lines
             lines.forEach(line => {
-                const cls = getLineClass(line);
-                consoleDiv.innerHTML += `<div class="line ${cls}">${escapeHtml(line)}</div>`;
+                consoleDiv.insertAdjacentHTML('beforeend', renderConsoleLine(line));
             });
             lastLineCount = lines.length;
+            lastConsoleLine = lines[lines.length - 1] || '';
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
         }
 
@@ -2536,6 +3234,83 @@
             return div.innerHTML;
         }
 
+        function escapeRegExp(text) {
+            return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function parsePlayerChat(line) {
+            const chatMatch = line.match(/(?:\[[^\]]+\]\s*)?:?\s*<([^>]+)>\s*(.+)/);
+            if (!chatMatch) return null;
+            return { name: chatMatch[1], message: chatMatch[2] };
+        }
+
+        function parseAiChat(line) {
+            const aiName = currentAiName || 'Ava';
+            const aiMatch = line.match(new RegExp(`^\\[${escapeRegExp(aiName)}(?:\\s*->[^\\]]+)?\\]\\s*(.+)$`));
+            if (!aiMatch) return null;
+            return { name: aiName, message: aiMatch[1] };
+        }
+
+        function renderChatMessage(type, name, message) {
+            const safeName = escapeHtml(name);
+            const safeMessage = escapeHtml(message);
+            const avatarUrl = type === 'ai'
+                ? `https://minotar.net/helm/${encodeURIComponent(name)}/32.png`
+                : `https://minotar.net/helm/${encodeURIComponent(name)}/32.png`;
+            const fallback = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect fill=%22%2323263b%22 width=%2232%22 height=%2232%22/><text x=%2216%22 y=%2220%22 text-anchor=%22middle%22 fill=%22%23e2e8f0%22 font-size=%2210%22>?</text></svg>";
+            const avatarClass = type === 'ai' ? 'chat-avatar ai-avatar' : 'chat-avatar player-avatar';
+            const playerStyle = type === 'ai' ? null : getPlayerChatStyle(name || '');
+            const nameColor = type === 'ai' ? '#c084fc' : playerStyle.accent;
+            const wrapperClass = type === 'ai' ? 'chat-message ai-chat' : 'chat-message player-chat';
+            const bubbleStyle = type === 'ai'
+                ? ''
+                : ` style="--player-accent: ${playerStyle.accent}; --player-bg: ${playerStyle.bg};"`;
+            return `
+                <div class="${wrapperClass}"${bubbleStyle}>
+                    <img src="${avatarUrl}" alt="${safeName}" class="${avatarClass}" onerror="this.src='${fallback}'">
+                    <div class="chat-content">
+                        <span class="chat-name" style="color: ${nameColor};">${safeName}</span>
+                        <span class="chat-text">${safeMessage}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getPlayerChatStyle(name) {
+            const palette = [
+                { accent: '#22d3ee', bg: 'rgba(34, 211, 238, 0.12)' },
+                { accent: '#4ade80', bg: 'rgba(74, 222, 128, 0.12)' },
+                { accent: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
+                { accent: '#fb7185', bg: 'rgba(251, 113, 133, 0.12)' },
+                { accent: '#a78bfa', bg: 'rgba(167, 139, 250, 0.12)' },
+                { accent: '#38bdf8', bg: 'rgba(56, 189, 248, 0.12)' },
+                { accent: '#f97316', bg: 'rgba(249, 115, 22, 0.12)' },
+                { accent: '#34d399', bg: 'rgba(52, 211, 153, 0.12)' }
+            ];
+            const input = String(name || '').toLowerCase();
+            let hash = 0;
+            for (let i = 0; i < input.length; i++) {
+                hash = ((hash << 5) - hash + input.charCodeAt(i)) | 0;
+            }
+            return palette[Math.abs(hash) % palette.length];
+        }
+
+        function renderConsoleLine(line) {
+            const ai = parseAiChat(line);
+            if (ai) return renderChatMessage('ai', ai.name, ai.message);
+            const player = parsePlayerChat(line);
+            if (player) return renderChatMessage('player', player.name, player.message);
+            const cls = getLineClass(line);
+            return `<div class="line ${cls}">${escapeHtml(line)}</div>`;
+        }
+
+        function setButtonIconState(button, icon, text, animationClass = '') {
+            if (!button) return;
+            const anim = animationClass ? ` ${animationClass}` : '';
+            button.innerHTML = `<i data-lucide="${icon}" class="btn-icon${anim}"></i> ${text}`;
+            lucide.createIcons();
+        }
+
         function setConsoleMode(mode) {
             cmdMode = mode === 'cmd';
             document.getElementById('btn-cmd').classList.toggle('active', cmdMode);
@@ -2550,7 +3325,7 @@
             const consoleDiv = document.getElementById('console-output');
             
             if (cmdMode) {
-                consoleDiv.innerHTML += `<div class="line default">> ${escapeHtml(cmd)}</div>`;
+                consoleDiv.insertAdjacentHTML('beforeend', `<div class="line default">> ${escapeHtml(cmd)}</div>`);
                 await fetch(`${API}/command`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -2558,7 +3333,7 @@
                 });
             } else {
                 const playerName = "Sweete_Nightmare";
-                consoleDiv.innerHTML += `<div class="line chat">💬 ${playerName}: ${escapeHtml(cmd)}</div>`;
+                consoleDiv.insertAdjacentHTML('beforeend', renderChatMessage('player', playerName, cmd));
                 
                 const res = await fetch(`${API}/ai/chat`, {
                     method: 'POST',
@@ -2568,7 +3343,7 @@
                 const data = await res.json();
                 
                 if (data.response) {
-                    consoleDiv.innerHTML += `<div class="line info">🤖 AI: ${escapeHtml(data.response)}</div>`;
+                    consoleDiv.insertAdjacentHTML('beforeend', renderChatMessage('ai', currentAiName || 'Ava', data.response));
                 }
             }
             
@@ -2589,7 +3364,7 @@
             startBtn.style.display = 'none';
             stopBtn.style.display = 'block';
             stopBtn.disabled = true;
-            stopBtn.innerHTML = '<i data-lucide="loader"></i> Starting server...';
+            setButtonIconState(stopBtn, 'loader', 'Starting server...');
             
             statusEl.classList.remove('stopped');
             statusEl.classList.add('running');
@@ -2620,6 +3395,7 @@
         }
 
         async function pollServerStart() {
+            const startBtn = document.getElementById('start-btn');
             const stopBtn = document.getElementById('stop-btn');
             const statusEl = document.getElementById('server-status');
             const statusText = document.getElementById('status-text');
@@ -2659,10 +3435,10 @@
                         
                         // Server running but not done yet
                         statusText.textContent = 'Starting... (' + attempts + 's)';
-                        stopBtn.innerHTML = '<i data-lucide="loader"></i> Starting server... (' + attempts + 's)';
+                        setButtonIconState(stopBtn, 'loader', 'Starting server... (' + attempts + 's)');
                     } else if (statusData.running && statusData.profile !== currentProfile) {
                         stopBtn.disabled = false;
-                        stopBtn.innerHTML = '<i data-lucide="power"></i> Stop Server';
+                        setButtonIconState(stopBtn, 'power', 'Stop Server');
                         startBtn.style.display = 'block';
                         stopBtn.style.display = 'none';
                         statusEl.classList.remove('running');
@@ -2673,18 +3449,18 @@
                     }
                 } catch (e) {}
                 
-                stopBtn.innerHTML = '<i data-lucide="loader"></i> Starting server... (' + attempts + 's)';
+                setButtonIconState(stopBtn, 'loader', 'Starting server... (' + attempts + 's)');
             }
             
             stopBtn.disabled = false;
-            stopBtn.innerHTML = '<i data-lucide="power"></i> Stop Server';
+            setButtonIconState(stopBtn, 'power', 'Stop Server');
             alert('Server may not have started properly. Please check console.');
         }
 
         async function stopServer() {
             const stopBtn = document.getElementById('stop-btn');
             stopBtn.disabled = true;
-            stopBtn.innerHTML = '<i data-lucide="loader"></i> Stopping server...';
+            setButtonIconState(stopBtn, 'loader', 'Stopping server...');
             
             const consoleDiv = document.getElementById('console-output');
             consoleDiv.innerHTML += '<div class="line warn">⏳ Stopping server...</div>';
@@ -2728,7 +3504,7 @@
                     }
                 } catch (e) {}
                 
-                stopBtn.innerHTML = '<i data-lucide="loader"></i> Stopping server... (' + attempts + 's)';
+                setButtonIconState(stopBtn, 'loader', 'Stopping server... (' + attempts + 's)');
             }
             
             // Force stop if timeout
@@ -2752,14 +3528,14 @@
                 startBtn.style.display = 'none';
                 stopBtn.style.display = 'block';
                 stopBtn.disabled = false;
-                stopBtn.innerHTML = '<i data-lucide="power"></i> Stop Server';
+                setButtonIconState(stopBtn, 'power', 'Stop Server');
             } else {
                 statusEl.classList.remove('running');
                 statusText.textContent = 'Stopped';
                 startBtn.style.display = 'block';
                 stopBtn.style.display = 'none';
                 startBtn.disabled = false;
-                startBtn.innerHTML = '<i data-lucide="play"></i> Start Server';
+                setButtonIconState(startBtn, 'play', 'Start Server');
             }
         }
 
@@ -2848,6 +3624,162 @@
                 alert('World settings saved!');
             } catch (e) {
                 alert('Error saving settings');
+            }
+        }
+
+        async function addOperator() {
+            const input = document.getElementById('op-player');
+            const statusEl = document.getElementById('op-status');
+            if (!input) return;
+            const name = input.value.trim();
+            if (!name) {
+                statusEl.textContent = 'Enter a player name to op.';
+                return;
+            }
+
+            statusEl.textContent = `Adding operator: ${name}...`;
+            try {
+                const res = await fetch(`${API}/command`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({cmd: `op ${name}`})
+                });
+                const data = await res.json();
+                if (data && data.success === false) {
+                    statusEl.textContent = data.message || 'Failed to add operator.';
+                } else {
+                    statusEl.textContent = `Operator granted to ${name}.`;
+                    input.value = '';
+                    await loadOperators();
+                    setTimeout(() => {
+                        if (statusEl && statusEl.textContent.includes('Operator granted')) statusEl.textContent = '';
+                    }, 3000);
+                }
+            } catch (e) {
+                statusEl.textContent = 'Failed to add operator. Check server status.';
+            }
+        }
+
+        async function removeOperator(name) {
+            const statusEl = document.getElementById('op-status');
+            if (!name) return;
+            statusEl.textContent = `Removing operator: ${name}...`;
+            try {
+                const res = await fetch(`${API}/command`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({cmd: `deop ${name}`})
+                });
+                const data = await res.json();
+                if (data && data.success === false) {
+                    statusEl.textContent = data.message || `Failed to remove operator: ${name}.`;
+                    return;
+                }
+                statusEl.textContent = `Operator removed from ${name}.`;
+                await loadOperators();
+                setTimeout(() => {
+                    if (statusEl && statusEl.textContent.includes('Operator removed')) statusEl.textContent = '';
+                }, 3000);
+            } catch (e) {
+                statusEl.textContent = 'Failed to remove operator. Check server status.';
+            }
+        }
+
+        async function loadOperators() {
+            const container = document.getElementById('operators-list');
+            if (!container) return;
+            try {
+                const query = currentProfile ? `?profile=${encodeURIComponent(currentProfile)}` : '';
+                const res = await fetch(`${API}/operators${query}`);
+                const data = await res.json();
+                const operators = (data && Array.isArray(data.operators)) ? data.operators : [];
+                if (operators.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted);">No operators found.</p>';
+                    return;
+                }
+
+                const fallback = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 36 36%22><rect fill=%22%2323263b%22 width=%2236%22 height=%2236%22/><text x=%2218%22 y=%2221%22 text-anchor=%22middle%22 fill=%22%23e2e8f0%22 font-size=%2210%22>?</text></svg>";
+                container.innerHTML = operators
+                    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
+                    .map(op => {
+                        const rawName = String(op.name || '');
+                        const safeName = escapeHtml(rawName);
+                        const encodedName = encodeURIComponent(rawName);
+                        const avatarUrl = `https://minotar.net/helm/${encodedName}/36.png`;
+                        return `
+                            <div class="operator-entry">
+                                <div class="operator-left">
+                                    <img class="operator-head" src="${avatarUrl}" alt="${safeName}" onerror="this.src='${fallback}'">
+                                    <span class="operator-name">${safeName}</span>
+                                </div>
+                                <button class="btn btn-danger operator-remove" title="Remove operator" aria-label="Remove operator" onclick="removeOperator(decodeURIComponent('${encodedName}'))"><i data-lucide="trash-2" class="remove-ico"></i></button>
+                            </div>
+                        `;
+                    })
+                    .join('');
+                lucide.createIcons();
+            } catch (e) {
+                container.innerHTML = '<p style="color: var(--danger);">Failed to load operators.</p>';
+            }
+        }
+
+        async function setPlayerGamemode(playerName, mode) {
+            if (!playerName || !mode) return;
+            try {
+                await fetch(`${API}/command`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({cmd: `gamemode ${mode} ${playerName}`})
+                });
+            } catch (e) {
+                console.error('Failed to set gamemode', e);
+            }
+        }
+
+        async function makeOperator() {
+            const playerName = document.getElementById('modal-player-name')?.textContent;
+            if (!playerName) return;
+            try {
+                await fetch(`${API}/command`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({cmd: `op ${playerName}`})
+                });
+            } catch (e) {
+                console.error('Failed to op player', e);
+            }
+        }
+
+        async function healPlayer() {
+            const playerName = document.getElementById('modal-player-name')?.textContent;
+            if (!playerName) return;
+            try {
+                await fetch(`${API}/command`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({cmd: `effect give ${playerName} minecraft:instant_health 1 5 true`})
+                });
+                await fetch(`${API}/command`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({cmd: `effect give ${playerName} minecraft:saturation 1 5 true`})
+                });
+            } catch (e) {
+                console.error('Failed to heal player', e);
+            }
+        }
+
+        async function killPlayer() {
+            const playerName = document.getElementById('modal-player-name')?.textContent;
+            if (!playerName) return;
+            try {
+                await fetch(`${API}/command`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({cmd: `kill ${playerName}`})
+                });
+            } catch (e) {
+                console.error('Failed to kill player', e);
             }
         }
 
@@ -2961,33 +3893,29 @@
             try {
                 const statusRes = await fetch(`${API}/status`);
                 const statusData = await statusRes.json();
+                const isRunning = statusData.running && statusData.profile === currentProfile;
                 
-                if (!statusData.running || statusData.profile !== currentProfile) {
-                    document.getElementById('players-online-count').textContent = '0';
-                    document.getElementById('players-total-count').textContent = '0';
-                    document.getElementById('players-container').innerHTML = '<p style="color: var(--text-muted);">Server not running</p>';
-                    return;
-                }
-                
-                // Get all players who have ever joined
+                // Get all players who have ever joined (works even when offline)
                 const allRes = await fetch(`${API}/players/all`);
                 const allData = await allRes.json();
                 const allPlayers = allData.players || [];
                 
-                // Get online player details
-                const onlineRes = await fetch(`${API}/players/details`);
-                const onlineData = await onlineRes.json();
-                const onlinePlayers = onlineData.players || [];
+                let onlinePlayers = [];
+                let onlineMap = {};
                 
-                // Create a map of online player details
-                const onlineMap = {};
-                for (const p of onlinePlayers) {
-                    onlineMap[p.name.toLowerCase()] = p;
+                // Only get online player details if server is running
+                if (isRunning) {
+                    const onlineRes = await fetch(`${API}/players/details?limit=0`);
+                    const onlineData = await onlineRes.json();
+                    onlinePlayers = onlineData.players || [];
+                    for (const p of onlinePlayers) {
+                        onlineMap[p.name.toLowerCase()] = p;
+                    }
                 }
                 
                 // Update counts
                 const onlineCount = allPlayers.filter(p => p.isOnline).length;
-                document.getElementById('players-online-count').textContent = onlineCount;
+                document.getElementById('players-online-count').textContent = isRunning ? onlineCount : '0';
                 document.getElementById('players-total-count').textContent = allPlayers.length;
                 
                 const container = document.getElementById('players-container');
@@ -3009,8 +3937,8 @@
                 
                 let html = '';
                 
-                // Online players section
-                if (onlineSection.length > 0) {
+                // Online players section (only show if server is running)
+                if (isRunning && onlineSection.length > 0) {
                     html += `<div class="players-section">
                         <h3>Online (${onlineSection.length})</h3>
                         <div class="player-grid">`;
@@ -3103,19 +4031,26 @@
             const headEl = document.getElementById('modal-player-head');
             const statusEl = document.getElementById('modal-player-status');
             const gridEl = document.getElementById('modal-inventory-grid');
+            const modeEl = document.getElementById('modal-gamemode');
             
             nameEl.textContent = playerName;
             headEl.innerHTML = `<img src="https://minotar.net/helm/${playerName}/64.png" alt="${playerName}"
                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2260%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2240%22>?</text></svg>'">`;
+            statusEl.innerHTML = '<span class="status-item">Loading...</span>';
+            gridEl.innerHTML = '<div class="empty-inventory">Loading inventory...</div>';
+            modal.classList.remove('hidden');
             
             try {
-                const res = await fetch(`${API}/player/${playerName}/inventory`);
+                const res = await fetch(`${API}/player/${playerName}/inventory?fast=1`);
                 const data = await res.json();
                 
                 if (data.error) {
                     statusEl.innerHTML = '<span class="status-item">Player not online</span>';
                     gridEl.innerHTML = '<div class="empty-inventory">Player is not currently online</div>';
                 } else {
+                    if (modeEl) {
+                        modeEl.value = data.gamemode || 'survival';
+                    }
                     statusEl.innerHTML = `
                         <span class="status-item">${data.gamemode || 'survival'}</span>
                         <span class="status-item">❤ ${data.health !== null ? data.health.toFixed(1) : '?'}</span>
@@ -3128,38 +4063,92 @@
                     }
                     
                     const inventory = data.inventory || [];
+                    const slotMap = new Map();
+                    inventory.forEach((item, idx) => {
+                        if (!item) return;
+                        const slotRaw = item.slot !== undefined ? item.slot : idx;
+                        const slot = Number.isFinite(Number(slotRaw)) ? Number(slotRaw) : idx;
+                        if (!slotMap.has(slot)) slotMap.set(slot, item);
+                    });
                     
-                    if (inventory.length === 0) {
-                        gridEl.innerHTML = '<div class="empty-inventory">Inventory is empty</div>';
-                    } else {
-                        let gridHtml = '';
-                        // Create 45 slots (standard inventory + hotbar)
-                        for (let i = 0; i < 45; i++) {
-                            const item = inventory[i];
-                            if (item) {
-                                const itemName = item.item;
-                                const count = item.count;
-                                const displayName = itemName.replace('minecraft:', '').replace(/_/g, ' ');
-                                const imgUrl = getItemImageUrl(itemName);
-                                gridHtml += `
-                                    <div class="inventory-slot">
-                                        <img src="${imgUrl}" alt="${displayName}"
-                                            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect fill=%22%23444%22 width=%2232%22 height=%2232%22/><text x=%2216%22 y=%2220%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2210%22>?</text></svg>'">
-                                        ${count > 1 ? `<span class="count">${count}</span>` : ''}
-                                        <div class="item-tooltip">${displayName} x${count}</div>
-                                    </div>
-                                `;
-                            } else {
-                                gridHtml += '<div class="inventory-slot"></div>';
-                            }
-                        }
-                        gridEl.innerHTML = gridHtml;
-                    }
+                    const renderSlot = (item) => {
+                        if (!item) return '<div class="inventory-slot"></div>';
+                        const itemName = item.item || item.id || '';
+                        const count = item.count || item.Count || 1;
+                        const displayName = itemName.replace('minecraft:', '').replace(/_/g, ' ');
+                        const imgUrl = getItemImageUrl(itemName);
+                        return `
+                            <div class="inventory-slot">
+                                <img src="${imgUrl}" alt="${displayName}"
+                                    onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect fill=%22%23444%22 width=%2232%22 height=%2232%22/><text x=%2216%22 y=%2220%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2210%22>?</text></svg>'">
+                                ${count > 1 ? `<span class="count">${count}</span>` : ''}
+                                <div class="item-tooltip">${displayName} x${count}</div>
+                            </div>
+                        `;
+                    };
+                    
+                    const armorSlots = [103, 102, 101, 100];
+                    const hotbarSlots = Array.from({length: 9}, (_, i) => i);
+                    const mainSlots = Array.from({length: 27}, (_, i) => i + 9);
+                    const offhandSlot = 40;
+                    
+                    let armorHtml = '';
+                    armorSlots.forEach(slot => { armorHtml += renderSlot(slotMap.get(slot)); });
+                    
+                    let mainHtml = '';
+                    mainSlots.forEach(slot => { mainHtml += renderSlot(slotMap.get(slot)); });
+                    
+                    let hotbarHtml = '';
+                    hotbarSlots.forEach(slot => { hotbarHtml += renderSlot(slotMap.get(slot)); });
+                    
+                    const offhandHtml = renderSlot(slotMap.get(offhandSlot));
+                    
+                    gridEl.innerHTML = `
+                        <div class="inventory-layout">
+                            <div class="inventory-armor">
+                                ${armorHtml}
+                            </div>
+                            <div>
+                                <div class="inventory-main">
+                                    ${mainHtml}
+                                </div>
+                                <div class="inventory-hotbar">
+                                    ${hotbarHtml}
+                                </div>
+                            </div>
+                            <div class="inventory-offhand">
+                                ${offhandHtml}
+                            </div>
+                        </div>
+                    `;
                 }
             } catch (e) {
                 console.error('Failed to load inventory:', e);
                 statusEl.innerHTML = '<span class="status-item">Error loading data</span>';
                 gridEl.innerHTML = '<div class="empty-inventory">Failed to load inventory</div>';
+            }
+
+            // Fetch full stats in background (slower)
+            try {
+                const resFull = await fetch(`${API}/player/${playerName}/inventory?fast=0`);
+                const dataFull = await resFull.json();
+                if (!dataFull.error) {
+                    if (modeEl) {
+                        modeEl.value = dataFull.gamemode || modeEl.value || 'survival';
+                    }
+                    let statusHtml = `
+                        <span class="status-item">${dataFull.gamemode || 'survival'}</span>
+                        <span class="status-item">❤ ${dataFull.health !== null ? dataFull.health.toFixed(1) : '?'}</span>
+                        <span class="status-item">🍗 ${dataFull.hunger !== null ? dataFull.hunger : '?'}</span>
+                        <span class="status-item">✦ Level ${dataFull.xp_level !== null ? dataFull.xp_level : '?'}</span>
+                    `;
+                    if (dataFull.coords) {
+                        statusHtml += `<span class="status-item">📍 ${Math.round(dataFull.coords.x)}, ${Math.round(dataFull.coords.y)}, ${Math.round(dataFull.coords.z)}</span>`;
+                    }
+                    statusEl.innerHTML = statusHtml;
+                }
+            } catch (e) {
+                // Ignore background update errors
             }
             
             modal.classList.remove('hidden');
@@ -3187,6 +4176,8 @@
 
         async function saveAISettings() {
             await saveConfig();
+            const nameInput = document.getElementById('ai-name');
+            currentAiName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : 'Ava';
         }
 
         async function savePrompt() {
@@ -3313,10 +4304,11 @@
                     list.innerHTML = mods.map(mod => `
                         <div style="padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
                             <span>${mod.name}</span>
-                            <button class="btn btn-small btn-danger" onclick="removeMod('${mod.name}')">Remove</button>
+                            <button class="btn btn-small btn-danger" onclick="removeMod('${mod.name}')"><i data-lucide="trash-2" class="remove-ico"></i> Remove</button>
                         </div>
                     `).join('');
                 }
+                lucide.createIcons();
             } catch (e) {
                 console.log('Failed to load mods', e);
             }
@@ -3333,19 +4325,133 @@
         }
 
         // Backup Functions
+        function getSelectedBackupProviders() {
+            const providers = [];
+            if (document.getElementById('provider-google')?.checked) providers.push('google_drive');
+            if (document.getElementById('provider-dropbox')?.checked) providers.push('dropbox');
+            if (document.getElementById('provider-onedrive')?.checked) providers.push('onedrive');
+            return providers;
+        }
+
+        function getSelectedAutoBackupProviders() {
+            const providers = [];
+            if (document.getElementById('auto-provider-google')?.checked) providers.push('google_drive');
+            if (document.getElementById('auto-provider-dropbox')?.checked) providers.push('dropbox');
+            if (document.getElementById('auto-provider-onedrive')?.checked) providers.push('onedrive');
+            return providers;
+        }
+
+        function providerDisplayName(provider) {
+            const map = {
+                google_drive: 'Google Drive',
+                dropbox: 'Dropbox',
+                onedrive: 'OneDrive'
+            };
+            return map[provider] || provider;
+        }
+
+        function closeBackupLoginModal() {
+            document.getElementById('backup-login-modal')?.classList.add('hidden');
+        }
+
+        async function openProviderLogin(provider) {
+            try {
+                const res = await fetch(`${API}/backup/providers/auth-url?provider=${encodeURIComponent(provider)}`);
+                const data = await res.json();
+                if (data && data.success && data.auth_url) {
+                    window.open(data.auth_url, '_blank');
+                } else {
+                    alert(
+                        data?.error
+                            ? `${providerDisplayName(provider)} login is not configured on the server.\n\n${data.error}`
+                            : `${providerDisplayName(provider)} login is not configured on the server.`
+                    );
+                }
+            } catch (e) {
+                alert(`Failed to open login for ${providerDisplayName(provider)}.`);
+            }
+        }
+
+        function showBackupLoginModal(missingProviders) {
+            const modal = document.getElementById('backup-login-modal');
+            const text = document.getElementById('backup-login-text');
+            const actions = document.getElementById('backup-login-actions');
+            if (!modal || !text || !actions) return;
+            const names = missingProviders.map(providerDisplayName).join(', ');
+            text.textContent = `You must login to your ${names} account(s) to create backup.`;
+            actions.innerHTML = missingProviders.map(p => `
+                <button class="btn btn-primary" onclick="openProviderLogin('${p}')">
+                    <i data-lucide="external-link"></i> Login ${providerDisplayName(p)}
+                </button>
+            `).join('');
+            modal.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        async function ensureProvidersConnected(providers) {
+            if (!providers || providers.length === 0) return false;
+            try {
+                const q = encodeURIComponent(providers.join(','));
+                const res = await fetch(`${API}/backup/providers/status?providers=${q}`);
+                const data = await res.json();
+                const map = (data && data.providers) ? data.providers : {};
+                const missing = providers.filter(p => !(map[p] && map[p].connected));
+                if (missing.length > 0) {
+                    showBackupLoginModal(missing);
+                    return false;
+                }
+                return true;
+            } catch (e) {
+                alert('Failed to verify cloud provider login status.');
+                return false;
+            }
+        }
+
         async function createBackup() {
             if (!currentProfile) {
                 alert('Select a profile first');
                 return;
             }
+            const providers = getSelectedBackupProviders();
+            if (providers.length === 0) {
+                alert('Select at least one backup provider.');
+                return;
+            }
+            const connected = await ensureProvidersConnected(providers);
+            if (!connected) return;
             try {
-                const res = await fetch(`${API}/backup/${currentProfile}`);
+                const backupName = (document.getElementById('backup-name')?.value || '').trim();
+                const backupType = document.getElementById('backup-type')?.value || 'full_server';
+                const res = await fetch(`${API}/backup/create`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        profile: currentProfile,
+                        backup_name: backupName || null,
+                        backup_type: backupType,
+                        providers
+                    })
+                });
                 const result = await res.json();
                 if (result.success) {
-                    alert('Backup created successfully!');
+                    const uploads = result?.backup?.uploads || {};
+                    const failed = Object.entries(uploads)
+                        .filter(([, v]) => !(v && v.success))
+                        .map(([k, v]) => `${k}: ${v?.error || 'unknown error'}`);
+                    if (result.partial || failed.length) {
+                        alert(`Backup created, but cloud upload is partial.\n${failed.join('\n')}`);
+                    } else {
+                        alert('Backup created and uploaded successfully!');
+                    }
                     loadBackupHistory();
                 } else {
-                    alert('Backup failed: ' + result.error);
+                    const uploads = result?.backup?.uploads || {};
+                    const failed = Object.entries(uploads)
+                        .filter(([, v]) => !(v && v.success))
+                        .map(([k, v]) => `${k}: ${v?.error || 'unknown error'}`);
+                    const details = failed.length ? `\n${failed.join('\n')}` : '';
+                    alert('Backup failed: ' + (result.error || 'Unknown error') + details);
+                    loadBackupHistory();
                 }
             } catch (e) {
                 alert('Failed to create backup');
@@ -3354,22 +4460,102 @@
 
         async function loadBackupHistory() {
             try {
-                const res = await fetch(`${API}/backup/list`);
-                const backups = await res.json();
+                const q = currentProfile ? `?profile=${encodeURIComponent(currentProfile)}` : '';
+                const res = await fetch(`${API}/backup/list${q}`);
+                const raw = await res.json();
+                const backups = Array.isArray(raw)
+                    ? raw
+                    : (Array.isArray(raw?.backups)
+                        ? raw.backups
+                        : (Array.isArray(raw?.history)
+                            ? raw.history
+                            : (Array.isArray(raw?.items) ? raw.items : [])));
                 
                 const list = document.getElementById('backup-history-list');
                 if (backups.length === 0) {
                     list.innerHTML = '<p style="color: var(--text-muted);">No backups yet</p>';
                 } else {
+                    const providerLinks = (b) => {
+                        const uploads = b?.uploads || {};
+                        const links = [];
+                        if (uploads.google_drive?.url) {
+                            links.push(`<a href="${uploads.google_drive.url}" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: none;">Google Drive</a>`);
+                        }
+                        if (uploads.onedrive?.web_url) {
+                            links.push(`<a href="${uploads.onedrive.web_url}" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: none;">OneDrive</a>`);
+                        }
+                        if (uploads.dropbox?.path) {
+                            links.push(`<span style="color: var(--text-muted);">Dropbox: ${uploads.dropbox.path}</span>`);
+                        }
+                        return links.length ? links.join(' | ') : '<span style="color: var(--text-muted);">No cloud link available</span>';
+                    };
                     list.innerHTML = backups.map(b => `
                         <div style="padding: 10px; border-bottom: 1px solid var(--border);">
                             <strong>${b.name}</strong>
-                            <p style="color: var(--text-muted); font-size: 12px;">${b.timestamp}</p>
+                            <p style="color: var(--text-muted); font-size: 12px;">${new Date((b.created_at || 0) * 1000).toLocaleString()} | ${b.backup_type || 'full_server'} | ${(b.providers || []).join(', ')}</p>
+                            <p style="font-size: 12px; margin-top: 4px;">${providerLinks(b)}</p>
                         </div>
                     `).join('');
                 }
             } catch (e) {
                 console.log('Failed to load backup history', e);
+            }
+        }
+
+        async function loadBackupSettings() {
+            if (!currentProfile) return;
+            try {
+                const res = await fetch(`${API}/backup/settings?profile=${encodeURIComponent(currentProfile)}`);
+                const data = await res.json();
+                document.getElementById('auto-backup-toggle').checked = !!data.enabled;
+                document.getElementById('auto-backup-type').value = data.backup_type || 'full_server';
+                document.getElementById('backup-interval').value = Number(data.backup_interval_hours || 24);
+                document.getElementById('backup-on-stop-count').value = Number(data.backup_on_stop_count || 10);
+                const providers = Array.isArray(data.providers) ? data.providers : ['google_drive'];
+                document.getElementById('provider-google').checked = providers.includes('google_drive');
+                document.getElementById('provider-dropbox').checked = providers.includes('dropbox');
+                document.getElementById('provider-onedrive').checked = providers.includes('onedrive');
+                document.getElementById('auto-provider-google').checked = providers.includes('google_drive');
+                document.getElementById('auto-provider-dropbox').checked = providers.includes('dropbox');
+                document.getElementById('auto-provider-onedrive').checked = providers.includes('onedrive');
+            } catch (e) {
+                console.log('Failed to load backup settings', e);
+            }
+        }
+
+        async function saveBackupSettings() {
+            if (!currentProfile) {
+                alert('Select a profile first');
+                return;
+            }
+            const providers = getSelectedAutoBackupProviders();
+            if (providers.length === 0) {
+                alert('Select at least one auto backup provider.');
+                return;
+            }
+            const connected = await ensureProvidersConnected(providers);
+            if (!connected) return;
+            try {
+                const res = await fetch(`${API}/backup/settings`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        profile: currentProfile,
+                        enabled: document.getElementById('auto-backup-toggle').checked,
+                        backup_type: document.getElementById('auto-backup-type').value || 'full_server',
+                        backup_interval_hours: Number(document.getElementById('backup-interval').value || 24),
+                        backup_on_stop_count: Number(document.getElementById('backup-on-stop-count').value || 10),
+                        providers
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Auto backup settings saved.');
+                } else {
+                    alert('Failed to save backup settings: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Failed to save backup settings.');
             }
         }
 
@@ -3460,3 +4646,4 @@
     </script>
 </body>
 </html>
+

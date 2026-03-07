@@ -1,5 +1,6 @@
 import json
 import random
+import re
 from core.gateway import gateway
 from core.memory_engine import memory_engine
 from world.world_intelligence import world_intelligence
@@ -32,6 +33,11 @@ class ResponseEngine:
         role = player.get("role", "player")
         trust = player.get("trust_score", 0.5)
         
+        if intent_result and intent_result.get("command_suggestions"):
+            suggestions = intent_result.get("command_suggestions", [])
+            if suggestions:
+                return "I couldn't map that. Try: " + "; ".join(suggestions[:3])
+
         # Only return command response if command was actually executed
         if intent_result and intent_result.get("intent") not in ["none", "unknown", "error"] and intent_result.get("executed"):
             return self._generate_command_response(intent_result, player_name)
@@ -42,6 +48,7 @@ class ResponseEngine:
         intent = intent_result.get("intent", "")
         params = intent_result.get("parameters", {})
         success = intent_result.get("executed", False)
+        task_series = intent_result.get("task_series", [])
         
         if not success:
             responses = {
@@ -56,8 +63,47 @@ class ResponseEngine:
             }
             base = responses.get(intent, ["Done."])
             return random.choice(base)
+
+        if task_series:
+            command = task_series[0]["title"] if task_series else "that"
+            text = command.lower()
+            if "locate nearest" in text:
+                what = text.replace("locate nearest", "").strip()
+                return f"Found the nearest {what}. Check chat for coords."
+            if "teleport" in text:
+                return "Done, teleporting now."
+            if "time" in text:
+                return "Done, time updated."
+            if "weather" in text:
+                return "Done, weather changed."
+            return "Done."
         
         return "Command executed."
+
+    def naturalize_for_chat(self, response, player_name=None, intent_result=None):
+        if not response:
+            return response
+        text = str(response).strip()
+
+        # Remove robotic planner format if it appears from older cached responses.
+        if text.lower().startswith("plan:"):
+            done_match = re.search(r"done:\s*([^\.]+)", text, re.IGNORECASE)
+            if done_match:
+                done_text = done_match.group(1).strip()
+                low = done_text.lower()
+                if "locate nearest" in low:
+                    what = low.replace("locate nearest", "").strip()
+                    text = f"Found the nearest {what}. Check chat for coords."
+                elif "execute" in low:
+                    text = "Done."
+                else:
+                    text = f"Done: {done_text}."
+            else:
+                text = "Done."
+
+        text = text.replace("Goal: check if complete.", "").strip()
+        text = re.sub(r"\s{2,}", " ", text).strip()
+        return text
     
     def _generate_chat_response(self, message, player_name, context):
         system_prompt = PERSONALITY_PROMPTS.get(self.personality, PERSONALITY_PROMPTS["neutral"])

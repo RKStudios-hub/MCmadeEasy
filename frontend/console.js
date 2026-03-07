@@ -433,7 +433,15 @@ async function sendCommand() {
         });
     } else {
         const playerName = prompt("Enter your Minecraft username:", "Sweete_Nightmare") || "Player";
-        consoleDiv.innerHTML += `<div class="line chat">💬 ${playerName}: ${escapeHtml(cmd)}</div>`;
+        // Add player chat message with avatar
+        consoleDiv.innerHTML += `
+            <div class="chat-message player-chat">
+                <img src="https://minotar.net/helm/${playerName}/32.png" alt="${playerName}" class="chat-avatar">
+                <div class="chat-content">
+                    <span class="chat-name" style="color: #22d3ee;">${playerName}</span>
+                    <span class="chat-text">${escapeHtml(cmd)}</span>
+                </div>
+            </div>`;
         const res = await fetch(`${API}/ai/chat`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -441,7 +449,15 @@ async function sendCommand() {
         });
         const data = await res.json();
 
-        consoleDiv.innerHTML += `<div class="line ai-chat">🤖 Ava: ${escapeHtml(data.response)}</div>`;
+        // Add AI response with avatar
+        consoleDiv.innerHTML += `
+            <div class="chat-message ai-chat">
+                <img src="https://minotar.net/helm/Ava/32.png" alt="Ava" class="chat-avatar" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect fill=%22%23c084fc%22 width=%2232%22 height=%2232%22/><text x=%2216%22 y=%2220%22 text-anchor=%22middle%22 fill=%22white%22>🤖</text></svg>'">
+                <div class="chat-content">
+                    <span class="chat-name" style="color: #c084fc;">Ava</span>
+                    <span class="chat-text">${escapeHtml(data.response || '...')}</span>
+                </div>
+            </div>`;
     }
     input.value = '';
     consoleDiv.scrollTop = consoleDiv.scrollHeight;
@@ -557,6 +573,32 @@ function connectConsole() {
                 const newLines = lines.slice(lastLineCount);
                 newLines.forEach(line => {
                     line = stripColorCodes(line);
+                    
+                    // Skip entity data messages and other noise
+                    if (line.includes('has the following entity data') || 
+                        line.includes('Found no elements') ||
+                        line.includes('Ticking entity') ||
+                        line.includes('ChunkTaskScheduler') ||
+                        line.includes('Server thread')) {
+                        return;
+                    }
+                    
+                    // Check if it's a chat message (handles both <player> and [Not Secure] <player> formats)
+                    const chatMatch = line.match(/(?:\[.*?\]\s*)?<([^>]+)>\s*(.+)/);
+                    if (chatMatch) {
+                        const playerName = chatMatch[1];
+                        const message = chatMatch[2];
+                        consoleDiv.innerHTML += `
+                            <div class="chat-message player-chat">
+                                <img src="https://minotar.net/helm/${playerName}/32.png" alt="${playerName}" class="chat-avatar">
+                                <div class="chat-content">
+                                    <span class="chat-name" style="color: #22d3ee;">${playerName}</span>
+                                    <span class="chat-text">${escapeHtml(message)}</span>
+                                </div>
+                            </div>`;
+                        return;
+                    }
+                    
                     const cls = getLineClass(line);
                     const escaped = escapeHtml(line);
                     const colored = colorizeLine(escaped);
@@ -567,11 +609,26 @@ function connectConsole() {
         }
         
         if (ai) {
-            consoleDiv.innerHTML += `<div class="line ai">🤖 ${escapeHtml(ai.message)}</div>`;
+            consoleDiv.innerHTML += `
+                <div class="chat-message ai-chat">
+                    <img src="https://minotar.net/helm/Ava/32.png" alt="Ava" class="chat-avatar" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect fill=%22%23c084fc%22 width=%2232%22 height=%2232%22/><text x=%2216%22 y=%2220%22 text-anchor=%22middle%22 fill=%22white%22>🤖</text></svg>'">
+                    <div class="chat-content">
+                        <span class="chat-name" style="color: #c084fc;">Ava</span>
+                        <span class="chat-text">${escapeHtml(ai.message)}</span>
+                    </div>
+                </div>`;
         }
         
         if (chat && chat.message) {
-            consoleDiv.innerHTML += `<div class="line ai-chat">💬 ${escapeHtml(chat.message)}</div>`;
+            const playerName = chat.player || "Player";
+            consoleDiv.innerHTML += `
+                <div class="chat-message player-chat">
+                    <img src="https://minotar.net/helm/${playerName}/32.png" alt="${playerName}" class="chat-avatar">
+                    <div class="chat-content">
+                        <span class="chat-name" style="color: #22d3ee;">${playerName}</span>
+                        <span class="chat-text">${escapeHtml(chat.message)}</span>
+                    </div>
+                </div>`;
         }
         
         consoleDiv.scrollTop = consoleDiv.scrollHeight;

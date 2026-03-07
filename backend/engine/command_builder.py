@@ -1,4 +1,5 @@
 import re
+import difflib
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -27,6 +28,11 @@ BLACKLISTED_COMMANDS = [
 ]
 
 COMMAND_TEMPLATES = {
+    "raw_command": {
+        "template": None,
+        "admin_only": True,
+        "dangerous": True
+    },
     "set_time": {
         "template": "time set {value}",
         "admin_only": True,
@@ -43,7 +49,7 @@ COMMAND_TEMPLATES = {
         "dangerous": False
     },
     "give_item": {
-        "template": "minecraft:give {target} {item} {amount}",
+        "template": "give {target} {item} {amount}",
         "admin_only": True,
         "dangerous": False
     },
@@ -63,21 +69,6 @@ COMMAND_TEMPLATES = {
         "admin_only": True,
         "dangerous": False,
         "multi": True
-    },
-    "set_weather": {
-        "template": "weather {type}",
-        "admin_only": True,
-        "dangerous": False
-    },
-    "give_item": {
-        "template": "minecraft:give {target} {item} {amount}",
-        "admin_only": True,
-        "dangerous": False
-    },
-    "summon": {
-        "template": "summon {entity} ~ ~ ~ {Count:{amount}}",
-        "admin_only": True,
-        "dangerous": False
     },
     "teleport": {
         "template": "tp {target} {destination}",
@@ -169,6 +160,12 @@ class CommandBuilder:
     def build(self, intent, parameters):
         if intent not in self.templates:
             return None
+
+        if intent == "raw_command":
+            command = (parameters.get("command") or "").strip()
+            if not command:
+                return None
+            return self._normalize_raw_command(command.lstrip("/"))
         
         template = self.templates[intent]
         
@@ -259,10 +256,19 @@ class CommandBuilder:
         if not name:
             return None
         struct_lower = str(name).lower().strip()
+        struct_norm = re.sub(r"[_-]+", " ", struct_lower)
+        struct_norm = re.sub(r"\s+", " ", struct_norm).strip()
         structure_map = {
             "village": "village",
             "nearest village": "village",
             "closest village": "village",
+            "snowy village": "village_snowy",
+            "snow village": "village_snowy",
+            "showy village": "village_snowy",
+            "desert village": "village_desert",
+            "savanna village": "village_savanna",
+            "taiga village": "village_taiga",
+            "plains village": "village_plains",
             "pillager": "pillager_outpost",
             "outpost": "pillager_outpost",
             "mansion": "mansion",
@@ -279,17 +285,31 @@ class CommandBuilder:
             "fortress": "fortress",
             "nether fortress": "fortress",
             "bastion": "bastion",
-            "end city": "endcity",
+            "end city": "end_city",
+            "endcity": "end_city",
             "shipwreck": "shipwreck",
             "buried treasure": "buried_treasure",
             "ruined portal": "ruined_portal",
             "mineshaft": "mineshaft",
         }
-        if struct_lower in structure_map:
-            return structure_map[struct_lower]
+        if struct_norm in structure_map:
+            return structure_map[struct_norm]
+
+        # Prefer explicit multi-word phrase containment (e.g. "desert village")
         for key in sorted(structure_map.keys(), key=len, reverse=True):
-            if key in struct_lower:
+            if " " in key and key in struct_norm:
                 return structure_map[key]
+
+        # Fuzzy match after phrase checks to handle typos like "showy village".
+        close = difflib.get_close_matches(struct_norm, list(structure_map.keys()), n=1, cutoff=0.72)
+        if close:
+            return structure_map[close[0]]
+
+        # Single-word fallback only for exact token hits.
+        tokens = set(struct_norm.split())
+        for key, value in structure_map.items():
+            if " " not in key and key in tokens:
+                return value
         return None
     
     def _is_player(self, name):
@@ -309,6 +329,82 @@ class CommandBuilder:
     
     def get_available_commands(self):
         return list(self.templates.keys())
+
+    def _normalize_raw_command(self, command):
+        cmd = command.strip()
+        lower = cmd.lower()
+
+        # Common shorthand normalization from chat-style wording.
+        time_match = re.match(r"^time\s+(day|night|noon|midnight|sunrise|sunset|\d+)$", lower)
+        if time_match:
+            return f"time set {time_match.group(1)}"
+
+        gamemode_match = re.match(r"^gamemode\s+(survival|creative|adventure|spectator)$", lower)
+        if gamemode_match:
+            return f"gamemode {gamemode_match.group(1)} @a"
+
+        tp_me_match = re.match(r"^(tp|teleport)\s+me\s+(.+)$", cmd, re.IGNORECASE)
+        if tp_me_match:
+            raw_dest = tp_me_match.group(2).strip()
+            raw_dest = re.sub(r"^(to\s+)", "", raw_dest, flags=re.IGNORECASE).strip()
+            resolved = self._resolve_destination(raw_dest)
+            if isinstance(resolved, str) and resolved.startswith("LOCATE:"):
+                structure_id = resolved.split(":", 1)[1]
+                return f"LOCATE_TP:{structure_id}:@a"
+            if resolved:
+                return f"tp @a {resolved}"
+            return "tp @a"
+
+        # Normalize natural-language locate shorthand.
+        locate_match = re.match(r"^locate\s+(?:nearest|closest)\s+(.+)$", lower)
+        if locate_match:
+            structure_text = locate_match.group(1).strip()
+            resolved = self._resolve_structure(structure_text)
+            if resolved:
+                return f"LOCATE:{resolved}"
+            return f"locate structure {structure_text}"
+
+        locate_plain_match = re.match(r"^locate\s+(.+)$", lower)
+        if locate_plain_match and "structure" not in lower and "biome" not in lower:
+            structure_text = locate_plain_match.group(1).strip()
+            resolved = self._resolve_structure(structure_text)
+            if resolved:
+                return f"LOCATE:{resolved}"
+            return f"locate structure {structure_text}"
+
+        # Natural kill phrasing -> valid selector command
+        kill_all_match = re.match(r"^kill\s+all(?:\s+the)?\s+([a-z_ ]+)$", lower)
+        if kill_all_match:
+            entity_text = kill_all_match.group(1).strip()
+            entity_map = {
+                "enderman": "enderman",
+                "endermen": "enderman",
+                "zombie": "zombie",
+                "zombies": "zombie",
+                "skeleton": "skeleton",
+                "skeletons": "skeleton",
+                "skelitons": "skeleton",
+                "skeltons": "skeleton",
+                "creeper": "creeper",
+                "creepers": "creeper",
+                "spider": "spider",
+                "spiders": "spider",
+                "sheep": "sheep",
+                "sheeps": "sheep",
+                "villager": "villager",
+                "villagers": "villager",
+                "vilager": "villager",
+                "vilagers": "villager",
+            }
+            if entity_text in entity_map:
+                entity = entity_map[entity_text]
+            else:
+                close = difflib.get_close_matches(entity_text, list(entity_map.keys()), n=1, cutoff=0.74)
+                entity = entity_map[close[0]] if close else entity_text.replace(" ", "_")
+            # 3 chunks radius = 48 blocks. Execute at players so distance is player-relative.
+            return f"execute at @a run kill @e[type=minecraft:{entity},distance=..48]"
+
+        return cmd
 
 
 command_builder = CommandBuilder()

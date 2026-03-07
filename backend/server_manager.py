@@ -20,6 +20,7 @@ class ServerManager:
         self._players_cache = []
         self._players_cache_time = 0
         self._players_cache_ttl = 5  # Cache for 5 seconds
+        self._query_lock = threading.Lock()
     
     def _load_saved_profile(self):
         """Load the saved profile path from file"""
@@ -105,7 +106,13 @@ class ServerManager:
             try:
                 line = self.process.stdout.readline()
                 if line:
-                    self.output_lines.append(line.strip())
+                    # Strip ANSI color codes - more comprehensive pattern
+                    import re
+                    # Handle various ANSI escape sequences
+                    clean_line = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', line.strip())
+                    clean_line = re.sub(r'\x1b\]\d+;[^\x07]*\x07', '', clean_line)  # OSC sequences
+                    clean_line = re.sub(r'\x1b\[?[\d;]*[JKmsu]', '', clean_line)  # Other CSI sequences
+                    self.output_lines.append(clean_line)
                     if len(self.output_lines) > 1000:
                         self.output_lines = self.output_lines[-500:]
             except Exception:
@@ -174,34 +181,38 @@ class ServerManager:
                 return line
         return None
 
-    def _query_entity_data(self, player_name, path, timeout=2.0):
+    def _query_entity_data(self, player_name, path, timeout=1.0):
         if not self.is_running():
             return None
         
-        # Send the command and wait a bit
-        start_idx = len(self.output_lines)
-        self.send_command(f"data get entity {player_name} {path}")
-        
-        # Wait a moment for the command to execute
-        time.sleep(0.2)
-        
-        # Look through recent output for the data
-        search_lines = self.output_lines[max(0, start_idx-10):]
-        
-        for line in reversed(search_lines):
-            # Strip ANSI codes
-            clean_line = re.sub(r'\x1b\[[0-9;]*m', '', line)
-            if player_name in clean_line and path.lower() in clean_line.lower():
-                # Found the entity data
-                return clean_line
-        
-        # If not found, try a second search with broader criteria
-        for line in reversed(self.output_lines[-30:]):
-            clean_line = re.sub(r'\x1b\[[0-9;]*m', '', line)
-            if 'entity data' in clean_line.lower() and path in clean_line:
-                return clean_line
-        
-        return None
+        with self._query_lock:
+            # Send the command and wait a bit
+            start_idx = len(self.output_lines)
+            self.send_command(f"data get entity {player_name} {path}")
+            
+            deadline = time.time() + timeout
+            checked_idx = start_idx
+            while time.time() < deadline:
+                time.sleep(0.05)
+                new_lines = self.output_lines[checked_idx:]
+                if new_lines:
+                    for line in new_lines:
+                        clean_line = re.sub(r'\x1b\[[0-9;]*m', '', line)
+                        low = clean_line.lower()
+                        if player_name.lower() in low and 'entity data' in low:
+                            return clean_line
+                        if player_name.lower() in low and path.lower() in low:
+                            return clean_line
+                    checked_idx = len(self.output_lines)
+            
+            # Fallback: search forward from start_idx for the first matching entity data line
+            for line in self.output_lines[start_idx:]:
+                clean_line = re.sub(r'\x1b\[[0-9;]*m', '', line)
+                low = clean_line.lower()
+                if player_name.lower() in low and 'entity data' in low:
+                    return clean_line
+            
+            return None
 
     def _parse_entity_data(self, line):
         if not line:
@@ -241,36 +252,36 @@ class ServerManager:
         if not data:
             return []
         items = []
-        
-        # Try multiple patterns to match inventory data
-        # Pattern 1: Slot-based (newer Minecraft versions)
-        pattern1 = r'Slot:(\d+)b,id:"([^"]+)",Count:(\d+)b'
-        matches = re.findall(pattern1, data)
-        if matches:
-            for slot, item_id, count in matches:
-                name = item_id.replace("minecraft:", "")
+
+        for chunk in self._split_nbt_list(data):
+            slot_match = re.search(r"Slot:\s*(-?\d+)b?", chunk)
+            id_match = re.search(r'id:\s*"([^"]+)"', chunk)
+            count_match = re.search(r"Count:\s*(\d+)b?", chunk)
+            if id_match and count_match and slot_match:
+                name = id_match.group(1).replace("minecraft:", "")
                 items.append({
-                    "slot": int(slot),
+                    "slot": int(slot_match.group(1)),
                     "item": name,
-                    "count": int(count)
+                    "count": int(count_match.group(1))
                 })
+
+        if items:
             return items
-        
-        # Pattern 2: Simple id:count format (older or simpler output)
-        pattern2 = r'id:"([^"]+)",Count:(\d+)b'
+
+        # Fallback: Simple id/count pairs without slot info
+        pattern2 = r'id:\s*"([^"]+)",\s*Count:\s*(\d+)b?'
         matches = re.findall(pattern2, data)
         if matches:
             counts = {}
             for item_id, count in matches:
                 name = item_id.replace("minecraft:", "")
                 counts[name] = counts.get(name, 0) + int(count)
-            # Add slot numbers
             slot = 0
             for k, v in counts.items():
                 items.append({"slot": slot, "item": k, "count": v})
                 slot += 1
             return items
-        
+
         return []
 
     def _parse_inventory_full(self, data):
@@ -278,6 +289,55 @@ class ServerManager:
         if not data:
             return []
         return self._parse_inventory(data)
+
+    def _parse_item_list(self, data):
+        """Parse a list of item compounds without Slot fields (e.g., ArmorItems/Offhand)."""
+        if not data:
+            return []
+        items = []
+        for chunk in self._split_nbt_list(data):
+            id_match = re.search(r'id:\s*"([^"]+)"', chunk)
+            count_match = re.search(r"Count:\s*(\d+)b?", chunk)
+            if not id_match:
+                items.append(None)
+                continue
+            name = id_match.group(1).replace("minecraft:", "")
+            count = int(count_match.group(1)) if count_match else 1
+            items.append({"item": name, "count": count})
+        return items
+
+    def _split_nbt_list(self, data):
+        """Split a top-level NBT list into item chunks without being confused by nested braces."""
+        if not data:
+            return []
+        start = data.find('[')
+        end = data.rfind(']')
+        if start == -1 or end == -1 or end <= start:
+            return [data]
+        inner = data[start + 1:end]
+        chunks = []
+        buf = []
+        depth = 0
+        i = 0
+        while i < len(inner):
+            ch = inner[i]
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth = max(0, depth - 1)
+            if ch == ',' and depth == 0:
+                chunk = ''.join(buf).strip()
+                if chunk:
+                    chunks.append(chunk)
+                buf = []
+                i += 1
+                continue
+            buf.append(ch)
+            i += 1
+        tail = ''.join(buf).strip()
+        if tail:
+            chunks.append(tail)
+        return chunks
 
     def get_player_details(self, player_name):
         if not self.is_running():
@@ -289,16 +349,32 @@ class ServerManager:
             or self._query_entity_data(player_name, "PlayerGameType")
         )
         inv_line = self._query_entity_data(player_name, "Inventory")
+        armor_line = self._query_entity_data(player_name, "ArmorItems")
+        hand_line = (
+            self._query_entity_data(player_name, "HandItems")
+            or self._query_entity_data(player_name, "HandItem")
+        )
+        offhand_line = (
+            self._query_entity_data(player_name, "Offhand")
+            or self._query_entity_data(player_name, "OffhandItems")
+            or self._query_entity_data(player_name, "OffHand")
+        )
         
         # Get additional stats
-        health_line = self._query_entity_data(player_name, "Health")
-        food_line = self._query_entity_data(player_name, "foodLevel")
-        xp_line = self._query_entity_data(player_name, "xpLevel")
-        xp_total_line = self._query_entity_data(player_name, "totalExperience")
+        health_line = self._query_entity_data(player_name, "Health", timeout=0.6)
+        food_line = self._query_entity_data(player_name, "foodLevel", timeout=0.6)
+        xp_line = self._query_entity_data(player_name, "xpLevel", timeout=0.6)
+        xp_total_line = self._query_entity_data(player_name, "totalExperience", timeout=0.6)
 
         pos = self._parse_pos(self._parse_entity_data(pos_line))
         gamemode = self._parse_gamemode(self._parse_entity_data(gm_line))
         inventory = self._parse_inventory_full(self._parse_entity_data(inv_line))
+
+        # Some versions store offhand in slot -106 inside Inventory
+        for item in inventory:
+            if item.get("slot") == -106:
+                inventory.append({"slot": 40, "item": item.get("item"), "count": item.get("count", 1)})
+                break
         
         # Parse health
         health = None
@@ -331,7 +407,27 @@ class ServerManager:
             "xp_level": xp_level
         }
 
-    def get_players_details(self):
+    def get_player_inventory_fast(self, player_name):
+        """Fast inventory fetch: only query Inventory and map offhand slot -106."""
+        if not self.is_running():
+            return None
+        inv_line = self._query_entity_data(player_name, "Inventory", timeout=0.8)
+        inventory = self._parse_inventory_full(self._parse_entity_data(inv_line))
+        for item in inventory:
+            if item.get("slot") == -106:
+                inventory.append({"slot": 40, "item": item.get("item"), "count": item.get("count", 1)})
+                break
+        return {
+            "name": player_name,
+            "inventory": inventory,
+            "gamemode": None,
+            "health": None,
+            "hunger": None,
+            "xp_level": None,
+            "coords": None
+        }
+
+    def get_players_details(self, limit: int = 0):
         """Get details for currently online players with basic stats"""
         stats = self.get_stats()
         players = stats.get("players", [])
@@ -340,10 +436,9 @@ class ServerManager:
         if not isinstance(players, list):
             players = []
         
-        # Only query detailed info for a limited number of players
-        # to avoid console spam
         details = []
-        for name in players[:5]:  # Limit to 5 players max
+        max_players = len(players) if not limit or limit <= 0 else min(limit, len(players))
+        for name in players[:max_players]:
             if not isinstance(name, str):
                 continue
             try:
@@ -355,14 +450,14 @@ class ServerManager:
                 food_line = self._query_entity_data(name, "foodLevel")
                 xp_line = self._query_entity_data(name, "xpLevel")
                 
-                pos = self._parse_pos(pos_line)
-                gm_data = gm_line.replace("entity data: ", "") if gm_line else ""
+                pos = self._parse_pos(self._parse_entity_data(pos_line))
+                gm_data = self._parse_entity_data(gm_line) if gm_line else ""
                 gamemode = self._parse_gamemode(gm_data)
                 
                 # Parse health
                 health = None
                 if health_line:
-                    health_data = health_line.replace("entity data: ", "") if health_line else ""
+                    health_data = self._parse_entity_data(health_line) or ""
                     health_match = re.search(r"(\d+\.?\d*)f?", health_data)
                     if health_match:
                         health = float(health_match.group(1))
@@ -370,7 +465,7 @@ class ServerManager:
                 # Parse food/hunger
                 hunger = None
                 if food_line:
-                    food_data = food_line.replace("entity data: ", "") if food_line else ""
+                    food_data = self._parse_entity_data(food_line) or ""
                     hunger_match = re.search(r"(\d+)", food_data)
                     if hunger_match:
                         hunger = int(hunger_match.group(1))
@@ -378,7 +473,7 @@ class ServerManager:
                 # Parse XP level
                 xp_level = None
                 if xp_line:
-                    xp_data = xp_line.replace("entity data: ", "") if xp_line else ""
+                    xp_data = self._parse_entity_data(xp_line) or ""
                     xp_match = re.search(r"(\d+)", xp_data)
                     if xp_match:
                         xp_level = int(xp_match.group(1))
@@ -412,27 +507,89 @@ class ServerManager:
         """Locate nearest structure"""
         if not self.is_running():
             return None
-        commands = [
-            f"execute at {player_name} run locate structure {structure_type}",
-            f"execute at {player_name} run locate {structure_type}"
-        ]
-        for cmd in commands:
-            self.send_command(cmd)
-            time.sleep(0.2)
-        deadline = time.time() + 4.5
-        seen = set()
-        while time.time() < deadline:
-            lines = list(reversed(self.output_lines[-200:]))
-            for line in lines:
-                if line in seen:
+        requested = (structure_type or "").strip()
+        requested_lower = requested.lower()
+        dimension = None
+
+        # Build candidate structure ids in order of preference.
+        # Some MC versions reject minecraft:village and require biome-specific village structures.
+        if requested_lower in ["village", "minecraft:village"]:
+            candidates = [
+                "#village",
+                "minecraft:village_plains",
+                "minecraft:village_desert",
+                "minecraft:village_savanna",
+                "minecraft:village_snowy",
+                "minecraft:village_taiga",
+            ]
+        elif requested_lower in ["ocean_monument", "minecraft:ocean_monument", "monument", "minecraft:monument"]:
+            candidates = [
+                "minecraft:ocean_monument",
+                "minecraft:monument",
+            ]
+        else:
+            if requested.startswith("#"):
+                candidates = [requested]
+            elif ":" in requested:
+                candidates = [requested]
+            else:
+                candidates = [f"minecraft:{requested}"]
+
+        # Structures that only exist in specific dimensions.
+        if requested_lower in ["end_city", "minecraft:end_city", "endcity"]:
+            dimension = "minecraft:the_end"
+        elif requested_lower in ["fortress", "minecraft:fortress", "bastion", "minecraft:bastion"]:
+            dimension = "minecraft:the_nether"
+
+        def _run_and_wait(command, timeout=8.0):
+            start_idx = len(self.output_lines)
+            self.send_command(command)
+            deadline = time.time() + timeout
+            checked_idx = start_idx
+            while time.time() < deadline:
+                time.sleep(0.15)
+                new_lines = self.output_lines[checked_idx:]
+                if not new_lines:
                     continue
-                seen.add(line)
-                low = line.lower()
-                if "found" in low or "located" in low:
-                    return line
-                if "could not" in low or "unable" in low or "no structures" in low or "no such" in low:
-                    return line
-            time.sleep(0.2)
+                checked_idx = len(self.output_lines)
+                for line in new_lines:
+                    low = line.lower()
+                    if "[ava" in low or "ava ->" in low:
+                        continue
+                    if "entity data" in low or "found no elements matching" in low:
+                        continue
+                    if "located" in low or "nearest minecraft:" in low:
+                        return line
+                    if (
+                        "could not" in low
+                        or "unable" in low
+                        or "no structures" in low
+                        or "no such" in low
+                        or "no entity was found" in low
+                        or "incorrect argument for command" in low
+                        or "unknown or incomplete command" in low
+                    ):
+                        return line
+                    if requested_lower and requested_lower in low and (" at " in low or "(" in low):
+                        return line
+            return None
+
+        for candidate in candidates:
+            # Primary: anchor search around player's current position.
+            if dimension:
+                anchored_cmd = f"execute in {dimension} run locate structure {candidate}"
+            else:
+                anchored_cmd = f"execute at {player_name} run locate structure {candidate}"
+
+            anchored = _run_and_wait(anchored_cmd, timeout=12.0)
+            if anchored and "there is no structure with type" not in anchored.lower():
+                return anchored
+
+            # Fallback: run locate directly in case anchored command feedback was suppressed.
+            fallback = _run_and_wait(f"locate structure {candidate}", timeout=10.0)
+            if fallback and "there is no structure with type" not in fallback.lower():
+                return fallback
+
         return None
     
     def get_stats(self):

@@ -47,6 +47,7 @@ INTENT_TO_PERMISSION = {
     "xp": "xp",
     "effect": "effect",
     "enchant": "enchant",
+    "raw_command": "*",
 }
 
 class RoleEngine:
@@ -101,6 +102,9 @@ class RoleEngine:
         
         if role == "player":
             return False
+
+        if intent == "raw_command":
+            return role in ["owner", "admin"] and confidence >= 0.8
         
         if role == "admin" and confidence >= 0.7:
             result = self.has_permission(player_name, mapped_intent)

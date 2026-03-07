@@ -1,7 +1,11 @@
 import json
 import re
+import os
+import time
+import difflib
 from core.gateway import gateway
 from core.memory_engine import memory_engine
+from engine.command_catalog import command_catalog
 
 
 COMMON_ITEMS = [
@@ -103,6 +107,7 @@ class ItemResolver:
             return None
         
         user_text_lower = user_text.lower().strip().replace("netharite", "netherite")
+        user_text_lower = self._normalize_item_text(user_text_lower)
         
         # Check cache
         if user_text_lower in self._item_cache:
@@ -113,6 +118,12 @@ class ItemResolver:
             if item.replace("_", " ") == user_text_lower or item == user_text_lower.replace(" ", "_"):
                 self._item_cache[user_text_lower] = item
                 return item
+
+        # Fuzzy local match for misspellings/aliases
+        fuzzy = self._resolve_fuzzy_local(user_text_lower)
+        if fuzzy:
+            self._item_cache[user_text_lower] = fuzzy
+            return fuzzy
         
         # Try AI-powered matching for complex/named items
         item_id = self._resolve_with_ai(user_text)
@@ -145,12 +156,58 @@ Return ONLY the item ID (e.g., "golden_apple"), nothing else. If unsure, return 
                 # Clean up response
                 item = response.strip().strip('"').strip("'").lower()
                 item = item.replace("netharite", "netherite")
+                item = self._normalize_item_text(item)
+                # Reject invalid outputs like "30" or single token garbage
+                if not re.match(r"^[a-z][a-z0-9_]*$", item):
+                    return None
+                if item.isdigit():
+                    return None
                 # Validate it's a reasonable item name
                 if item and len(item) > 1:
-                    return item.replace(" ", "_")
+                    candidate = item.replace(" ", "_")
+                    # If AI guessed near-match, snap to local closest known item.
+                    exactish = self._resolve_fuzzy_local(candidate.replace("_", " "))
+                    return exactish or candidate
         except:
             pass
         
+        return None
+
+    def _normalize_item_text(self, text):
+        t = text.lower().strip()
+        # Strip command words and amount prefixes.
+        t = re.sub(r"^(give|gimme|spawn|summon|create|get|i want|i need|want|need)\s+", "", t)
+        t = re.sub(r"^(me|us|player|myself)\s+", "", t)
+        t = re.sub(r"^\d+\s+", "", t)
+        t = re.sub(r"^(a|an|the|some)\s+", "", t)
+        t = re.sub(r"\bof\b", " ", t)
+        t = re.sub(r"\s+", " ", t).strip()
+        # Common aliases
+        alias = {
+            "ender eye": "ender_eye",
+            "eye ender": "ender_eye",
+            "eye of ender": "ender_eye",
+            "endereye": "ender_eye",
+            "totem undying": "totem_of_undying",
+            "god apple": "enchanted_golden_apple",
+            "gold apple": "golden_apple",
+        }
+        if t in alias:
+            return alias[t]
+        return t
+
+    def _resolve_fuzzy_local(self, normalized_text):
+        if not normalized_text:
+            return None
+        candidates = {}
+        for item in self.common_items:
+            candidates[item] = item
+            candidates[item.replace("_", " ")] = item
+        keys = list(candidates.keys())
+        # Use permissive threshold so minor spelling errors still map.
+        match = difflib.get_close_matches(normalized_text, keys, n=1, cutoff=0.72)
+        if match:
+            return candidates[match[0]]
         return None
 
 
@@ -180,6 +237,7 @@ Supported intents:
 - xp: Give XP (amount: number)
 - effect: Potion effect
 - scan: Scan terrain/area (returns info, NO command to execute)
+- raw_command: Execute a direct command string (for plugin/mod commands). Use parameters: {"command":"..."}.
 
 MULTIPLE COMMANDS: If player wants multiple things, return MULTIPLE intents in an array:
 [{"intent": "give_item", "parameters": {"item": "diamond", "amount": 1}}, {"intent": "teleport", "parameters": {"destination": "village"}}]
@@ -249,8 +307,15 @@ ITEM_MAP = {
 
 STRUCTURE_MAP = {
     "village": "village",
-    "nearest village": "village", 
+    "nearest village": "village",
     "closest village": "village",
+    "snowy village": "village_snowy",
+    "snow village": "village_snowy",
+    "showy village": "village_snowy",
+    "desert village": "village_desert",
+    "savanna village": "village_savanna",
+    "taiga village": "village_taiga",
+    "plains village": "village_plains",
     "pillager outpost": "pillager_outpost",
     "outpost": "pillager_outpost",
     "woodland mansion": "mansion",
@@ -267,7 +332,8 @@ STRUCTURE_MAP = {
     "fortress": "fortress",
     "nether fortress": "fortress",
     "bastion": "bastion",
-    "end city": "endcity",
+    "end city": "end_city",
+    "endcity": "end_city",
     "shipwreck": "shipwreck",
     "buried treasure": "buried_treasure",
     "ruined portal": "ruined_portal",
@@ -303,9 +369,22 @@ class IntentEngine:
     def __init__(self):
         self.gateway = gateway
         self.memory = memory_engine
+        self._commands_cache = None
+        self._commands_cache_time = 0
+        self._commands_cache_ttl = 10
     
     def parse(self, message, player_name, context=None):
         message_lower = message.lower().strip()
+
+        forced_tp = self._force_tp_intent(message, player_name)
+        if forced_tp:
+            forced_tp.setdefault("raw", message)
+            return forced_tp
+
+        direct_result = self._try_direct_command(message)
+        if direct_result:
+            direct_result.setdefault("raw", message)
+            return direct_result
         
         player = self.memory.get_player(player_name)
         last_target = player.get("last_target", player_name)
@@ -315,30 +394,111 @@ class IntentEngine:
         pattern_result = self._try_patterns(resolved_message)
         if pattern_result:
             pattern_result["confidence"] = 0.95
+            pattern_result.setdefault("raw", message)
             return pattern_result
         
-        return self._parse_with_ai(message, player_name, context or {})
+        result = self._parse_with_ai(message, player_name, context or {})
+        if isinstance(result, dict):
+            result.setdefault("raw", message)
+        if result and result.get("intent") in ["none", "unknown"]:
+            suggestions = self._suggest_commands(message)
+            if suggestions:
+                result = {
+                    "intent": "unknown",
+                    "confidence": 0,
+                    "source": "commands_catalog",
+                    "command_suggestions": suggestions,
+                    "raw": message
+                }
+        return result
     
     def _resolve_pronouns(self, message, player_name, last_target):
         # Avoid breaking teleport-style commands by injecting player name into destination
         if not re.search(r"\b(tp|teleport|warp|take me to|go to|travel to|find me the)\b", message):
-            message = message.replace("me", player_name)
-        message = message.replace("my", f"{player_name}'s")
-        message = message.replace("i ", f"{player_name} ")
+            message = re.sub(r"\bme\b", player_name, message)
+        message = re.sub(r"\bmy\b", f"{player_name}'s", message)
+        message = re.sub(r"\bi\b", player_name, message)
         
-        if "him" in message or "her" in message:
-            message = message.replace("him", last_target)
-            message = message.replace("her", last_target)
+        if re.search(r"\b(him|her)\b", message):
+            message = re.sub(r"\bhim\b", last_target, message)
+            message = re.sub(r"\bher\b", last_target, message)
         
-        if "more" in message or "again" in message:
+        if re.search(r"\b(more|again)\b", message):
             if last_target:
-                message = message.replace("more", f"{last_target}")
-                message = message.replace("again", f"{last_target}")
+                message = re.sub(r"\bmore\b", f"{last_target}", message)
+                message = re.sub(r"\bagain\b", f"{last_target}", message)
         
         message = message.replace(" @a", " @a")
         message = message.replace(" @e", " @e")
         
         return message
+
+    def _try_direct_command(self, message):
+        if not message:
+            return None
+        raw = message.strip()
+        if not raw:
+            return None
+
+        if raw.startswith("/"):
+            command = raw.lstrip("/")
+        else:
+            lowered = f" {raw.lower()} "
+            # If text looks conversational/natural-language, do NOT treat as raw command.
+            natural_markers = [
+                " me ", " my ", " i ", " please ", " can you ", " could you ",
+                " nearest ", " closest ", " where ", " around ", " find ",
+                " give me ", " tp me ", " teleport me ", " take me "
+            ]
+            if any(marker in lowered for marker in natural_markers):
+                return None
+
+            candidate = raw.split()[0].lower()
+            known = set(command_catalog.get_commands())
+            if candidate in known:
+                # Require command-like second token to avoid "give me ..." as raw.
+                parts = raw.split()
+                if len(parts) >= 2:
+                    second = parts[1].lower()
+                    if second in {"me", "my", "to", "nearest", "closest"}:
+                        return None
+                command = raw
+            elif ":" in candidate and candidate.split(":", 1)[1] in known:
+                command = raw
+            else:
+                return None
+
+        return {
+            "intent": "raw_command",
+            "parameters": {"command": command},
+            "confidence": 0.95,
+            "source": "direct"
+        }
+
+    def _force_tp_intent(self, message, player_name):
+        if not message:
+            return None
+        raw = str(message).strip()
+        if not raw:
+            return None
+        if not re.search(r"\b(tp|teleport)\b", raw, re.IGNORECASE):
+            return None
+
+        # Convert "tp/teleport ... to <dest>" style messages into teleport intent.
+        m = re.search(r"\b(?:tp|teleport)\b\s*(?:me\s*)?(?:to\s*)?(.+)$", raw, re.IGNORECASE)
+        if not m:
+            return None
+        destination = m.group(1).strip() if m.group(1) else ""
+        destination = self._clean_destination(destination, player_name)
+        if not destination:
+            return None
+
+        return {
+            "intent": "teleport",
+            "parameters": {"target": "@a", "destination": destination},
+            "confidence": 0.98,
+            "source": "forced_tp_keyword"
+        }
     
     def _try_patterns(self, message):
         # Simple patterns first
@@ -391,8 +551,9 @@ class IntentEngine:
             elif "many" in message.lower() or "lots" in message.lower():
                 amount = 32
             
-            # Try AI resolver
-            item = item_resolver.resolve(message)
+            # Resolve item phrase (not the whole sentence) and tolerate misspellings.
+            item_phrase = self._extract_item_phrase(message)
+            item = item_resolver.resolve(item_phrase or message)
             if item:
                 return {
                     "intent": "give_item",
@@ -446,6 +607,14 @@ class IntentEngine:
         
         # Locate requests (where is/nearest/closest)
         if re.search(r"\b(where is|nearest|closest|locate)\b", message):
+            fuzzy_structure = self._resolve_structure_fuzzy(message)
+            if fuzzy_structure:
+                return {
+                    "intent": "locate",
+                    "parameters": {"structure": fuzzy_structure},
+                    "confidence": 0.88,
+                    "source": "pattern"
+                }
             for struct_name in STRUCTURE_MAP.keys():
                 if struct_name in message:
                     return {
@@ -456,6 +625,14 @@ class IntentEngine:
                     }
         
         # Structure names
+        fuzzy_structure = self._resolve_structure_fuzzy(message)
+        if fuzzy_structure:
+            return {
+                "intent": "teleport",
+                "parameters": {"target": "@a", "destination": fuzzy_structure},
+                "confidence": 0.85,
+                "source": "pattern"
+            }
         for struct_name, struct_id in STRUCTURE_MAP.items():
             if struct_name in message:
                 return {
@@ -475,6 +652,42 @@ class IntentEngine:
         dest = re.sub(rf"\s+{re.escape(player_name)}$", "", dest, flags=re.IGNORECASE)
         dest = re.sub(r"^to\s+", "", dest, flags=re.IGNORECASE)
         return dest.strip()
+
+    def _extract_item_phrase(self, message):
+        msg = message.lower().strip()
+        msg = re.sub(r"^(can you|please)\s+", "", msg)
+        msg = re.sub(r"^(give|gimme|get|i want|i need)\s+", "", msg)
+        msg = re.sub(r"^(me|us)\s+", "", msg)
+        msg = re.sub(r"^(\d+)\s+", "", msg)
+        msg = re.sub(r"^(a|an|the|some)\s+", "", msg)
+        # keep content before conjunction or action switch
+        msg = re.split(r"\b(and|then|also|tp|teleport|locate|where)\b", msg)[0].strip()
+        return msg
+
+    def _resolve_structure_fuzzy(self, message):
+        normalized = re.sub(r"[_-]+", " ", message.lower())
+        normalized = re.sub(r"\b(locat(?:e|ing)?|where|is|the|nearest|closest|find|me|to|a|an)\b", " ", normalized)
+        normalized = re.sub(r"\s+", " ", normalized).strip()
+        tokens = re.findall(r"[a-z]+", normalized)
+        if not tokens:
+            return None
+        text = " ".join(tokens)
+        keys = list(STRUCTURE_MAP.keys())
+        # Prefer explicit key containment first (specific phrases like "desert village").
+        for key in sorted(keys, key=len, reverse=True):
+            if key in text:
+                return key
+        m = difflib.get_close_matches(text, keys, n=1, cutoff=0.72)
+        if m:
+            return m[0]
+        # also check short likely phrases from tail
+        for n in [3, 2]:
+            if len(tokens) >= n:
+                tail = " ".join(tokens[-n:])
+                m2 = difflib.get_close_matches(tail, keys, n=1, cutoff=0.72)
+                if m2:
+                    return m2[0]
+        return None
     
     def _parse_with_ai(self, message, player_name, context):
         player = self.memory.get_player(player_name)
@@ -485,8 +698,10 @@ class IntentEngine:
         
         prompt = f"""Player: {player_name}
 Message: {message}{context_str}
+Available dynamic command roots: {command_catalog.build_prompt_hint(80)}
 
 IMPORTANT: The player may describe items or mobs in natural language. Use AI to determine the best Minecraft item/entity ID that matches their description.
+If the user clearly asks for a plugin/mod command, return intent raw_command with command text.
 
 Return JSON:"""
         
@@ -526,7 +741,53 @@ Return JSON:"""
         except Exception as e:
             print(f"[IntentEngine] JSON parse error: {e}")
         
-        return {"intent": "none", "confidence": 0, "source": "ai"}
+        return {"intent": "none", "confidence": 0, "source": "ai", "raw": message}
+
+    def _suggest_commands(self, message):
+        return command_catalog.suggest(message, limit=5)
+
+    def _load_commands_catalog(self):
+        now = time.time()
+        if self._commands_cache and now - self._commands_cache_time < self._commands_cache_ttl:
+            return self._commands_cache
+        profile_path = self._get_current_profile_path()
+        if not profile_path:
+            self._commands_cache = []
+            self._commands_cache_time = now
+            return self._commands_cache
+        commands_path = os.path.join(profile_path, "commands.txt")
+        if not os.path.exists(commands_path):
+            self._commands_cache = []
+            self._commands_cache_time = now
+            return self._commands_cache
+        commands = []
+        try:
+            with open(commands_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    raw = line.strip()
+                    if not raw:
+                        continue
+                    if raw.startswith("#") or raw.startswith("//"):
+                        continue
+                    name = raw.split()[0].lstrip("/")
+                    commands.append({"name": name.lower(), "line": raw})
+        except Exception:
+            commands = []
+        self._commands_cache = commands
+        self._commands_cache_time = now
+        return commands
+
+    def _get_current_profile_path(self):
+        try:
+            data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+            config_path = os.path.join(data_dir, "current_profile.json")
+            if os.path.exists(config_path):
+                with open(config_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return data.get("path")
+        except Exception:
+            pass
+        return None
 
 
 intent_engine = IntentEngine()

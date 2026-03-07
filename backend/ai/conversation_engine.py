@@ -11,7 +11,12 @@ class ConversationEngine:
         self.initiation_cooldown = 60
         self.greeting_cooldown = 30
     
-    def should_respond(self):
+    def should_respond(self, intent_result=None):
+        intent = (intent_result or {}).get("intent", "none")
+        # Never ignore command-like intents.
+        if intent not in ["none", "unknown", "error", "scan", "chat"]:
+            return True
+        # Normal conversation can be skipped occasionally.
         return random.random() > 0.1
     
     def can_initiate(self):
@@ -22,7 +27,7 @@ class ConversationEngine:
         return False
     
     def process_message(self, message, player_name, intent_result=None, context=None):
-        if not self.should_respond():
+        if not self.should_respond(intent_result):
             return None
         
         self.memory.increment_conversation(player_name)

@@ -65,10 +65,7 @@ class MC_AI:
         if not self.is_enabled:
             return None
         
-        if message.startswith('/') or message.startswith('!'):
-            return None
-        
-        if not self.conversation_engine.should_respond():
+        if message.startswith('!'):
             return None
         
         player = self.memory.get_player(player_name)
@@ -76,6 +73,16 @@ class MC_AI:
         context = self.world.get_state()
         
         intent_result = self.intent_engine.parse(message, player_name, context)
+
+        # Fallback: never drop obvious direct command phrasing like "tp me to stronghold".
+        if intent_result.get("intent") in ["none", "unknown", "error"] and re.search(r"^\s*(tp|teleport)\s+me\b", message, re.IGNORECASE):
+            intent_result = {
+                "intent": "raw_command",
+                "parameters": {"command": message.strip(), "target": "@a"},
+                "confidence": 0.95,
+                "source": "fallback_direct",
+                "raw": message
+            }
         
         should_execute = self._should_execute(intent_result, player_name)
         
@@ -106,6 +113,7 @@ class MC_AI:
         # Pass execution status to response generator
         if commands_executed:
             intent_result["executed"] = True
+        intent_result["task_series"] = self._build_task_series(intent_result, commands_executed, player_name)
         
         response = self.conversation_engine.process_message(message, player_name, intent_result, context)
         
@@ -155,11 +163,13 @@ class MC_AI:
                     success, msg = self.executor.execute(cmd, player_name, {
                         "intent": intent,
                         "confidence": intent_result.get("confidence", 0),
-                        "original_message": intent_result.get("raw", "")
+                        "original_message": intent_result.get("raw", ""),
+                        "parameters": params
                     })
                     if success:
-                        commands_to_run.append(cmd)
-                        print(f"[AI] Executed: {cmd}")
+                        resolved = self.executor.get_last_resolved_command() or cmd
+                        commands_to_run.append(resolved)
+                        print(f"[AI] Executed: {resolved}")
             return commands_to_run if commands_to_run else None
         
         print(f"[AI] Built command: {command}")
@@ -174,16 +184,43 @@ class MC_AI:
         success, msg = self.executor.execute(command, player_name, {
             "intent": intent,
             "original_message": intent_result.get("raw", ""),
-            "confidence": intent_result.get("confidence", 0)
+            "confidence": intent_result.get("confidence", 0),
+            "parameters": params
         })
         
         print(f"[AI] Execution result: {success}, {msg}")
         
         if success:
-            return command
+            return self.executor.get_last_resolved_command() or command
         
         return None
     
+    def _build_task_series(self, intent_result, commands_executed, player_name):
+        intent = intent_result.get("intent")
+        if not intent or intent in ["none", "unknown", "error", "scan"]:
+            return []
+        steps = []
+        if intent == "multi":
+            for cmd in commands_executed:
+                steps.append({"title": cmd, "status": "done"})
+            return steps
+        # Single intent
+        command = commands_executed[0] if commands_executed else None
+        if isinstance(command, str) and command.startswith("LOCATE_TP:"):
+            parts = command.split(":", 2)
+            structure = parts[1] if len(parts) > 1 else "structure"
+            target = parts[2] if len(parts) > 2 else player_name
+            steps.append({"title": f"Locate nearest {structure}", "status": "done" if commands_executed else "pending"})
+            steps.append({"title": f"Teleport {target}", "status": "done" if commands_executed else "pending"})
+        elif isinstance(command, str) and command.startswith("LOCATE:"):
+            parts = command.split(":", 1)
+            structure = parts[1] if len(parts) > 1 else "structure"
+            steps.append({"title": f"Locate nearest {structure}", "status": "done" if commands_executed else "pending"})
+        elif command:
+            steps.append({"title": f"Execute {command}", "status": "done" if commands_executed else "pending"})
+        else:
+            steps.append({"title": f"Execute intent {intent}", "status": "pending"})
+        return steps
     def process_console_line(self, line):
         if not self.is_enabled:
             return None

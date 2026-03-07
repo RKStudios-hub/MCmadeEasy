@@ -1,4 +1,5 @@
 import re
+from engine.command_catalog import command_catalog
 
 DANGEROUS_PATTERNS = [
     r';', r'&&', r'\|\|', r'\n',
@@ -42,6 +43,10 @@ class Validator:
         
         if not command_lower:
             return False, "Empty command"
+
+        # Internal command tokens used by the AI pipeline.
+        if command_lower.startswith("locate:") or command_lower.startswith("locate_tp:"):
+            return True, "Valid (internal token)"
         
         for pattern in self.dangerous_patterns:
             if pattern.search(command):
@@ -51,9 +56,12 @@ class Validator:
             if command_lower.startswith(black):
                 return False, f"Blacklisted command: {black}"
         
-        cmd_name = command_lower.split()[0] if command_lower.split() else ""
-        if cmd_name and not any(cmd_name.startswith(allowed) for allowed in self.allowed_commands):
-            pass
+        cmd_name = self._extract_cmd_name(command_lower)
+        dynamic_allowed = set(self.allowed_commands) | set(command_catalog.get_commands())
+        if cmd_name and dynamic_allowed and cmd_name not in dynamic_allowed:
+            # Allow unknown commands if they are namespaced, often plugin-owned.
+            if ":" not in (command_lower.split()[0] if command_lower.split() else ""):
+                return False, f"Unknown command root: {cmd_name}"
         
         return True, "Valid"
     
@@ -69,6 +77,15 @@ class Validator:
         base_cmd = parts[0].replace('minecraft:', '').replace('/', '')
         
         return True, "Syntax appears valid"
+
+    def _extract_cmd_name(self, command_lower):
+        first = command_lower.split()[0] if command_lower.split() else ""
+        first = first.lstrip("/")
+        if first.startswith("locate:") or first.startswith("locate_tp:"):
+            return first
+        if ":" in first:
+            first = first.split(":", 1)[1]
+        return first
 
 
 class Simulator:

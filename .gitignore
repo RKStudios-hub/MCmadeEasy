@@ -28,3 +28,16 @@ Thumbs.db
 # Node
 node_modules/
 package-lock.json
+
+# Personal / Sensitive
+config.json
+.env
+backups/
+backend/data/
+data/
+*.zip
+*.JAR
+*.txt
+!requirements.txt
+!README.md
+!Information/Dregora's Biome Catalog.txt

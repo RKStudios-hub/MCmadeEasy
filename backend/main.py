@@ -1,6 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 import asyncio
 import json
 import os
@@ -28,6 +28,8 @@ from integrations.drive_backup import backup_manager
 from integrations.grief_protection import grief_protection
 from integrations.web_hosting import hosting_manager
 from core.audit_logger import audit_logger
+from engine.command_catalog import command_catalog
+from engine.ml_command_engine import ml_command_engine
 
 app = FastAPI()
 
@@ -63,6 +65,131 @@ async def broadcast_console_message(message: str):
 def get_profile_path(name):
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, "servers", name)
+
+def get_active_profile_path():
+    if server.current_profile:
+        return server.current_profile
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "current_profile.json")
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r") as f:
+                data = json.load(f)
+                if data.get("path"):
+                    return data["path"]
+        except:
+            pass
+    return None
+
+def _extract_locate_coords(locate_resp: str):
+    if not locate_resp:
+        return None
+    # Typical format: "... is at [-912, ~, 224] (710 blocks away)"
+    m = re.search(r"\[\s*(-?\d+)\s*,\s*(?:~|-?\d+)\s*,\s*(-?\d+)\s*\]", locate_resp)
+    if m:
+        return m.group(1), m.group(2)
+    # Fallback: first and last integer in line
+    ints = re.findall(r"-?\d+", locate_resp)
+    if len(ints) >= 2:
+        return ints[0], ints[-1]
+    return None
+
+def _clean_locate_message(locate_resp: str):
+    if not locate_resp:
+        return None
+    raw = re.sub(r"^\[[^\]]+\]\s*INFO\]:\s*", "", locate_resp).strip()
+    coords = _extract_locate_coords(raw)
+    dist_match = re.search(r"\((\d+)\s+blocks away\)", raw, re.IGNORECASE)
+    struct_match = re.search(r"nearest\s+([#a-z0-9_:]+)(?:\s+\(([^)]+)\))?", raw, re.IGNORECASE)
+    if coords:
+        x, z = coords
+        distance = dist_match.group(1) if dist_match else None
+        if struct_match:
+            shown = struct_match.group(2) or struct_match.group(1)
+            shown = shown.replace("minecraft:", "").replace("#", "")
+            if distance:
+                return f"Nearest {shown} is at x {x}, z {z} ({distance} blocks away)."
+            return f"Nearest {shown} is at x {x}, z {z}."
+        if distance:
+            return f"Found it at x {x}, z {z} ({distance} blocks away)."
+        return f"Found it at x {x}, z {z}."
+    return raw
+
+def _build_tp_fallback_commands(message: str):
+    if not message:
+        return []
+    if not re.search(r"^\s*(tp|teleport)\b", message, re.IGNORECASE):
+        return []
+    try:
+        # Friendly shortcut for common non-vanilla phrasing.
+        if re.search(r"\bto\s+(spawn|worldspawn|world spawn)\b", message, re.IGNORECASE):
+            return ["spawn"]
+        fallback_cmd = ai_engine.mc_ai.command_builder.build(
+            "raw_command",
+            {"command": message.strip(), "target": "@a"}
+        )
+        if fallback_cmd:
+            return [fallback_cmd]
+    except Exception:
+        return []
+    return []
+
+def _structure_dimension(structure: str):
+    s = (structure or "").lower().strip()
+    if s in ["end_city", "minecraft:end_city", "endcity"]:
+        return "minecraft:the_end"
+    if s in ["fortress", "minecraft:fortress", "bastion", "minecraft:bastion"]:
+        return "minecraft:the_nether"
+    return None
+
+def _execute_ai_commands(commands_to_run, player):
+    executed = False
+    feedback = []
+    for cmd in commands_to_run or []:
+        if not cmd:
+            continue
+        executed = True
+        if isinstance(cmd, str) and cmd.startswith("LOCATE_TP:"):
+            parts = cmd.split(":", 2)
+            if len(parts) == 3:
+                structure = parts[1]
+                target = parts[2] if parts[2] else player
+                locate_resp = server.locate_structure(player, structure)
+                if locate_resp:
+                    coords = _extract_locate_coords(locate_resp)
+                    if coords:
+                        x, z = coords
+                        dim = _structure_dimension(structure)
+                        if dim:
+                            server.send_command(f"execute in {dim} run tp {target} {x} ~ {z}")
+                        else:
+                            server.send_command(f"tp {target} {x} ~ {z}")
+                        clean = _clean_locate_message(locate_resp) or "Located destination."
+                        server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{clean} Teleporting now.","color":"white"}}]')
+                        feedback.append(f"{clean} Teleporting now.")
+                    else:
+                        msg = f"Could not parse locate output for {structure}."
+                        server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{msg}","color":"white"}}]')
+                        feedback.append(msg)
+                else:
+                    msg = f"Locate failed for {structure}."
+                    server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{msg}","color":"white"}}]')
+                    feedback.append(msg)
+        elif isinstance(cmd, str) and cmd.startswith("LOCATE:"):
+            parts = cmd.split(":", 1)
+            if len(parts) == 2:
+                structure = parts[1]
+                locate_resp = server.locate_structure(player, structure)
+                if locate_resp:
+                    clean = _clean_locate_message(locate_resp) or locate_resp
+                    server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{clean}","color":"white"}}]')
+                    feedback.append(clean)
+                else:
+                    msg = f"Locate failed for {structure}."
+                    server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{msg}","color":"white"}}]')
+                    feedback.append(msg)
+        else:
+            server.send_command(cmd)
+    return executed, feedback
 
 @app.get("/profiles")
 def profiles():
@@ -272,6 +399,10 @@ def stop():
     success, msg = server.stop()
     if success:
         audit_logger.log("server_stop", "system", f"Server '{profile}' stopped", success=True, profile=profile)
+        try:
+            backup_manager.on_server_stop(profile)
+        except Exception:
+            pass
     return {"success": success, "message": msg}
 
 @app.get("/activity")
@@ -482,11 +613,42 @@ def get_all_players():
     return {"players": players}
 
 @app.get("/players/details")
-def get_players_details():
-    return {"players": server.get_players_details()}
+def get_players_details(limit: int = 0):
+    return {"players": server.get_players_details(limit)}
+
+@app.get("/operators")
+def get_operators(profile: str = None):
+    profile_path = get_profile_path(profile) if profile else get_active_profile_path()
+    if not profile_path:
+        return {"operators": [], "error": "No profile loaded"}
+
+    ops_path = os.path.join(profile_path, "ops.json")
+    if not os.path.exists(ops_path):
+        return {"operators": []}
+
+    try:
+        with open(ops_path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        operators = []
+        if isinstance(raw, list):
+            for entry in raw:
+                if not isinstance(entry, dict):
+                    continue
+                name = entry.get("name")
+                if not name:
+                    continue
+                operators.append({
+                    "name": name,
+                    "uuid": entry.get("uuid"),
+                    "level": entry.get("level", 4),
+                    "bypassesPlayerLimit": bool(entry.get("bypassesPlayerLimit", False))
+                })
+        return {"operators": operators}
+    except Exception as e:
+        return {"operators": [], "error": str(e)}
 
 @app.get("/player/{player}/inventory")
-def get_player_inventory(player: str):
+def get_player_inventory(player: str, fast: int = 1):
     """Get detailed inventory for a specific player"""
     # Only get inventory if player is online
     stats = server.get_stats()
@@ -495,8 +657,11 @@ def get_player_inventory(player: str):
     if player.lower() not in online_players:
         return {"error": "Player not online"}
     
-    # Query player details
-    details = server.get_player_details(player)
+    # Fast path: inventory only
+    if fast:
+        details = server.get_player_inventory_fast(player)
+    else:
+        details = server.get_player_details(player)
     if details:
         return {
             "name": player,
@@ -508,6 +673,7 @@ def get_player_inventory(player: str):
             "xp_level": details.get("xp_level")
         }
     return {"error": "Could not get player data"}
+
 
 @app.get("/player/{player}/locate/{structure}")
 def locate_structure(player: str, structure: str):
@@ -533,9 +699,28 @@ async def ai_chat(request: Request, message: str = None, player: str = "Player")
     if not message:
         return {"response": None}
 
+    # Deterministic TP path: execute directly even if intent/AI path misses this turn.
+    forced_tp_commands = _build_tp_fallback_commands(message)
+    if forced_tp_commands:
+        executed, feedback = _execute_ai_commands(forced_tp_commands, player)
+        return {
+            "response": feedback[0] if feedback else ("Teleporting..." if executed else "Teleport failed."),
+            "command": forced_tp_commands[0],
+            "executed": executed
+        }
+
     result = ai_engine.mc_ai.process_message(message, player)
     if result:
-        return {"response": result.get("response"), "command": result.get("command")}
+        commands_to_run = result.get("commands") or ([result.get("command")] if result.get("command") else [])
+        if not commands_to_run:
+            commands_to_run = _build_tp_fallback_commands(message)
+        executed, feedback = _execute_ai_commands(commands_to_run, player)
+
+        response_text = result.get("response")
+        has_locate_token = any(isinstance(c, str) and (c.startswith("LOCATE:") or c.startswith("LOCATE_TP:")) for c in commands_to_run)
+        if has_locate_token:
+            response_text = feedback[0] if feedback else "Done."
+        return {"response": response_text, "command": result.get("command"), "executed": executed}
     return {"response": None}
 
 @app.post("/ai/toggle")
@@ -553,6 +738,23 @@ def ai_set_mode(mode: str):
 def ai_reload():
     ai_engine.mc_ai.reload()
     return {"status": "reloaded", "ai_name": ai_engine.mc_ai.ai_name}
+
+@app.get("/ai/commands")
+def ai_commands(limit: int = 200):
+    commands = command_catalog.get_commands()
+    meta = command_catalog.get_meta()
+    if limit > 0:
+        commands = commands[:limit]
+    return {"count": len(commands), "commands": commands, "meta": meta}
+
+@app.get("/ai/ml/status")
+def ai_ml_status():
+    model = ml_command_engine.model
+    return {
+        "samples": len(model.get("samples", [])),
+        "intents": len(model.get("by_intent", {})),
+        "data_path": ml_command_engine.data_path
+    }
 
 @app.get("/config")
 def get_config():
@@ -595,92 +797,83 @@ async def console_ws(ws: WebSocket):
             console_subscribers.remove(ws)
 
 async def broadcast_console():
-    last_analyzed = ""
-    last_broadcast_time = 0
+    previous_lines = []
     while True:
         try:
-            if console_subscribers:
-                lines = server.get_output()
-                if lines:
-                    new_line = lines[-1] if lines else ""
-                    if new_line != last_analyzed and new_line:
-                        last_analyzed = new_line
-                        current_time = time.time()
+            lines = server.get_output()
+            if lines:
+                # Process true delta between snapshots so repeated identical lines
+                # (e.g. same chat command twice) are not dropped.
+                overlap = 0
+                max_overlap = min(len(previous_lines), len(lines))
+                for k in range(max_overlap, -1, -1):
+                    if previous_lines[-k:] == lines[:k]:
+                        overlap = k
+                        break
+                new_lines = lines[overlap:]
+                previous_lines = list(lines)
+
+                for new_line in new_lines:
+                    if not new_line:
+                        continue
+                    autonomous_response = ai_engine.mc_ai.process_console_line(new_line)
+                    if autonomous_response:
+                        ai_msg = f"[Ava] {autonomous_response}"
+                        server.add_output_line(ai_msg)
+                        command = f'tellraw @a [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{autonomous_response}","color":"white"}}]'
+                        server.send_command(command)
+                    
+                    chat_match = re.search(r'(?:\[.*?\]\s*)?<([^>]+)> (.+)', new_line)
+                    if chat_match:
+                        player = chat_match.group(1)
+                        message = chat_match.group(2).strip()
                         
-                        if current_time - last_broadcast_time < 0.3:
-                            await asyncio.sleep(0.2)
-                            continue
-                        last_broadcast_time = current_time
+                        result = ai_engine.mc_ai.process_message(message, player)
                         
-                        autonomous_response = ai_engine.mc_ai.process_console_line(new_line)
-                        if autonomous_response:
-                            ai_msg = f"[Ava] {autonomous_response}"
-                            server.add_output_line(ai_msg)
-                            command = f'tellraw @a [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{autonomous_response}","color":"white"}}]'
-                            server.send_command(command)
+                        print(f"[AI] Player: {player}, Mode: {ai_engine.mc_ai.mode}, Enabled: {ai_engine.mc_ai.is_enabled}")
+                        if result:
+                            print(f"[AI] Intent: {result.get('intent')}, Command: {result.get('command')}, Executed: {result.get('executed')}")
                         
-                        chat_match = re.search(r'<([^>]+)> (.+)', new_line)
-                        if chat_match:
-                            player = chat_match.group(1)
-                            message = chat_match.group(2).strip()
-                            
-                            result = ai_engine.mc_ai.process_message(message, player)
-                            
-                            print(f"[AI] Player: {player}, Mode: {ai_engine.mc_ai.mode}, Enabled: {ai_engine.mc_ai.is_enabled}")
-                            if result:
-                                print(f"[AI] Intent: {result.get('intent')}, Command: {result.get('command')}, Executed: {result.get('executed')}")
-                            
-                            if result and result.get("response"):
+                        if result and result.get("response"):
+                            commands_preview = result.get("commands") or ([result.get("command")] if result.get("command") else [])
+                            has_locate_token = any(
+                                isinstance(c, str) and (c.startswith("LOCATE:") or c.startswith("LOCATE_TP:"))
+                                for c in commands_preview
+                            )
+                            # Avoid duplicate/contradictory chatter for locate; we'll send a clean result after command execution.
+                            if has_locate_token:
+                                response = None
+                            else:
                                 response = result["response"]
-                                if len(response) > 150:
-                                    response = response[:150] + "..."
-                                # Log AI response to console
+                                try:
+                                    response = ai_engine.mc_ai.response_engine.naturalize_for_chat(
+                                        response, player, result.get("intent")
+                                    )
+                                except Exception:
+                                    pass
+                            if response and len(response) > 150:
+                                response = response[:150] + "..."
+                            # Log AI response to console
+                            if response:
                                 ai_msg = f"[Ava -> {player}] {response}"
                                 server.add_output_line(ai_msg)
                                 command = f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{response}","color":"white"}}]'
                                 server.send_command(command)
-                            
-                            if result:
-                                commands_to_run = result.get("commands") or ([result.get("command")] if result.get("command") else [])
-                                for cmd in commands_to_run:
-                                    if not cmd:
-                                        continue
-                                    print(f"[AI] Executing command: {cmd}")
-                                    if isinstance(cmd, str) and cmd.startswith("LOCATE_TP:"):
-                                        parts = cmd.split(":", 2)
-                                        if len(parts) == 3:
-                                            structure = parts[1]
-                                            target = parts[2] if parts[2] else player
-                                            locate_resp = server.locate_structure(player, structure)
-                                            print(f"[AI] Locate response: {locate_resp}")
-                                            if locate_resp:
-                                                m = re.search(r"(-?\\d+)\\s+(-?\\d+)\\s+(-?\\d+)", locate_resp)
-                                                if m:
-                                                    x, y, z = m.group(1), m.group(2), m.group(3)
-                                                    tp_cmd = f"tp {target} {x} {y} {z}"
-                                                    server.send_command(tp_cmd)
-                                                else:
-                                                    server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"Could not parse locate output for {structure}.","color":"white"}}]')
-                                            else:
-                                                server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"Locate failed for {structure}.","color":"white"}}]')
-                                    elif isinstance(cmd, str) and cmd.startswith("LOCATE:"):
-                                        parts = cmd.split(":", 1)
-                                        if len(parts) == 2:
-                                            structure = parts[1]
-                                            locate_resp = server.locate_structure(player, structure)
-                                            print(f"[AI] Locate response: {locate_resp}")
-                                            if locate_resp:
-                                                server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{locate_resp}","color":"white"}}]')
-                                            else:
-                                                server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"Locate failed for {structure}.","color":"white"}}]')
-                                    else:
-                                        server.send_command(cmd)
+                        
+                        if result:
+                            commands_to_run = result.get("commands") or ([result.get("command")] if result.get("command") else [])
+                            if not commands_to_run:
+                                commands_to_run = _build_tp_fallback_commands(message)
+                            for cmd in commands_to_run:
+                                print(f"[AI] Executing command: {cmd}")
+                            _execute_ai_commands(commands_to_run, player)
             await asyncio.sleep(0.5)
         except Exception:
             await asyncio.sleep(0.5)
 
 @app.on_event("startup")
 async def startup():
+    backup_manager.start_scheduler(lambda: os.path.basename(server.current_profile) if server.current_profile else None)
     asyncio.create_task(broadcast_console())
 
 @app.get("/mods/search")
@@ -725,19 +918,89 @@ def remove_mod(profile: str, mod_name: str, software: str = None):
 
 @app.get("/backup/{profile}")
 def create_backup(profile: str):
-    return backup_manager.create_backup(profile)
+    return backup_manager.create_backup(profile, backup_type="full_server", providers=["google_drive"], source="legacy")
 
 @app.get("/backup/list")
-def list_backups():
-    return backup_manager.list_backups()
+def list_backups(profile: str = None):
+    return backup_manager.list_backups(profile)
+
+@app.post("/backup/create")
+async def create_backup_advanced(request: Request):
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    profile = data.get("profile")
+    backup_name = data.get("backup_name")
+    backup_type = data.get("backup_type", "full_server")
+    providers = data.get("providers", ["google_drive"])
+    return backup_manager.create_backup(
+        profile=profile,
+        backup_name=backup_name,
+        backup_type=backup_type,
+        providers=providers,
+        source="manual"
+    )
 
 @app.post("/backup/restore")
 def restore_backup(request: Request):
     return {"success": True, "message": "Restore functionality requires Google Drive integration"}
 
-@app.post("/backup/schedule")
-def schedule_backup(request: Request):
-    return backup_manager.schedule_auto_backup("default")
+@app.get("/backup/settings")
+def get_backup_settings(profile: str):
+    return backup_manager.get_settings(profile)
+
+@app.post("/backup/settings")
+async def save_backup_settings(request: Request):
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    profile = data.get("profile")
+    return backup_manager.update_settings(profile, data)
+
+@app.get("/backup/providers/status")
+def backup_provider_status(providers: str = ""):
+    provider_list = [p.strip() for p in providers.split(",") if p.strip()]
+    return backup_manager.get_provider_connection_status(provider_list)
+
+@app.get("/backup/providers/auth-url")
+def backup_provider_auth_url(provider: str):
+    return backup_manager.get_provider_auth_url(provider)
+
+@app.get("/backup/providers/config")
+def backup_provider_config(provider: str):
+    return backup_manager.get_provider_oauth_config(provider)
+
+@app.post("/backup/providers/config")
+async def backup_provider_config_save(request: Request):
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    provider = data.get("provider")
+    return backup_manager.set_provider_oauth_config(provider, data)
+
+@app.get("/backup/oauth/callback/{provider}")
+def backup_oauth_callback(provider: str, code: str = None, state: str = None, error: str = None):
+    result = backup_manager.handle_oauth_callback(provider, code, state, error)
+    if result.get("success"):
+        html = f"""
+        <html><body style='font-family:Arial,sans-serif;background:#0b0b0f;color:#fff;padding:24px;'>
+        <h2>Cloud Login Connected</h2>
+        <p>{provider} is now connected. You can close this tab and return to MC Overseer.</p>
+        </body></html>
+        """
+        return HTMLResponse(content=html, status_code=200)
+    msg = result.get("error", "OAuth login failed")
+    html = f"""
+    <html><body style='font-family:Arial,sans-serif;background:#0b0b0f;color:#fff;padding:24px;'>
+    <h2>Cloud Login Failed</h2>
+    <p>{msg}</p>
+    <p>Check provider client id/secret and redirect URI env vars, then try again.</p>
+    </body></html>
+    """
+    return HTMLResponse(content=html, status_code=400)
 
 @app.get("/grief/status")
 def grief_status():
