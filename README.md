@@ -110,7 +110,7 @@ Features include:
 * Live console with command support
 * Embedded Dynmap viewer
   
-> **Note**  
+> ## **Note**  
 > The UI design is mostly inspired by **Aternos**, the free Minecraft server hosting platform.
 
 ---
@@ -141,7 +141,7 @@ Features include:
 <img src="How it looks/12.png" width="32%">
 </p>
 
-> ⚠️ **Note**  
+> ## **Note**  
 > The dashboard and features are **still under active development**, so the UI and functionality may change over time.
 
 ---
