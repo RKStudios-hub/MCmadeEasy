@@ -1,6 +1,7 @@
 import json
 import random
 import re
+import os
 from core.gateway import gateway
 from core.memory_engine import memory_engine
 from world.world_intelligence import world_intelligence
@@ -21,12 +22,30 @@ class ResponseEngine:
         self.memory = memory_engine
         self.personality = "neutral"
         self.ai_name = "Assistant"
+        self.server_name = None
     
-    def configure(self, personality=None, ai_name=None):
+    def configure(self, personality=None, ai_name=None, server_name=None):
         if personality:
             self.personality = personality
         if ai_name:
             self.ai_name = ai_name
+        if server_name:
+            self.server_name = server_name
+    
+    def _get_system_prompt(self):
+        """Get system prompt - check server-specific prompt.txt first"""
+        if self.server_name:
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            server_prompt_path = os.path.join(base_dir, "servers", self.server_name, "prompt.txt")
+            if os.path.exists(server_prompt_path):
+                try:
+                    with open(server_prompt_path, "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        if content:
+                            return content
+                except:
+                    pass
+        return PERSONALITY_PROMPTS.get(self.personality, PERSONALITY_PROMPTS["neutral"])
     
     def generate(self, message, player_name, intent_result=None, context=None):
         player = self.memory.get_player(player_name)
@@ -106,11 +125,11 @@ class ResponseEngine:
         return text
     
     def _generate_chat_response(self, message, player_name, context):
-        system_prompt = PERSONALITY_PROMPTS.get(self.personality, PERSONALITY_PROMPTS["neutral"])
+        system_prompt = self._get_system_prompt()
         
-        player_context = self.memory.get_context(player_name)
+        player_context = self.memory.get_context(player_name, self.server_name)
         
-        world_context = self.memory.get_world_context()
+        world_context = self.memory.get_world_context(self.server_name)
         world_str = f" Players online: {world_context.get('online_players', [])}. Weather: {world_context.get('weather', 'unknown')}. Time: {world_context.get('time', 'unknown')}."
         
         message_lower = message.lower()

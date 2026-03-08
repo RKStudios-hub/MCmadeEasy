@@ -10,6 +10,7 @@ class ConversationEngine:
         self.last_initiation = 0
         self.initiation_cooldown = 60
         self.greeting_cooldown = 30
+        self.server_name = None
     
     def should_respond(self, intent_result=None):
         intent = (intent_result or {}).get("intent", "none")
@@ -30,10 +31,10 @@ class ConversationEngine:
         if not self.should_respond(intent_result):
             return None
         
-        self.memory.increment_conversation(player_name)
+        self.memory.increment_conversation(player_name, self.server_name)
         
         if intent_result and intent_result.get("intent") != "none" and intent_result.get("intent") != "unknown":
-            self.memory.set_last_intent(player_name, intent_result.get("intent"), intent_result.get("parameters", {}).get("target"))
+            self.memory.set_last_intent(player_name, intent_result.get("intent"), intent_result.get("parameters", {}).get("target"), self.server_name)
         
         response = self.response_engine.generate(
             message, 
@@ -42,12 +43,12 @@ class ConversationEngine:
             context
         )
         
-        self.memory.add_conversation(player_name, message, response)
+        self.memory.add_conversation(player_name, message, response, self.server_name)
         
         return response
     
     def should_greet(self, player_name):
-        player = self.memory.get_player(player_name)
+        player = self.memory.get_player(player_name, self.server_name)
         return player.get("conversation_count", 0) <= 1
     
     def initiate(self, trigger, player_name=None, context=None):
@@ -61,8 +62,12 @@ class ConversationEngine:
         now = time.time()
         active = []
         for name, data in self.memory.player_memories.items():
+            # Filter by server if set
+            if self.server_name:
+                if not data.get("server") == self.server_name:
+                    continue
             if now - data.get("last_seen", 0) < 300:
-                active.append(name)
+                active.append(data.get("name", name))
         return active
 
 

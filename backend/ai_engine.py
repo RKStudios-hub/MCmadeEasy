@@ -61,14 +61,14 @@ class MC_AI:
     def is_enabled(self):
         return self.gateway.is_enabled()
     
-    def process_message(self, message, player_name):
+    def process_message(self, message, player_name, server_name=None):
         if not self.is_enabled:
             return None
         
         if message.startswith('!'):
             return None
         
-        player = self.memory.get_player(player_name)
+        player = self.memory.get_player(player_name, server_name)
         
         context = self.world.get_state()
         
@@ -114,6 +114,10 @@ class MC_AI:
         if commands_executed:
             intent_result["executed"] = True
         intent_result["task_series"] = self._build_task_series(intent_result, commands_executed, player_name)
+        
+        # Set server_name on engines for server-specific memory/prompts
+        self.response_engine.server_name = server_name
+        self.conversation_engine.server_name = server_name
         
         response = self.conversation_engine.process_message(message, player_name, intent_result, context)
         

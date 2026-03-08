@@ -75,7 +75,20 @@ class PersonalityEngine:
             return True
         return False
     
-    def get_system_prompt(self):
+    def get_system_prompt(self, server_name=None):
+        # Check for server-specific prompt.txt file first
+        if server_name:
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            server_prompt_path = os.path.join(base_dir, "servers", server_name, "prompt.txt")
+            if os.path.exists(server_prompt_path):
+                try:
+                    with open(server_prompt_path, "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        if content:
+                            return content
+                except:
+                    pass
+        
         return self.personalities.get(self.current_personality, {}).get("system_prompt", "")
     
     def get_autonomous_chance(self):

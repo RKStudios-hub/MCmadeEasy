@@ -5,6 +5,8 @@ import shutil
 
 BASE_DIR = "servers"
 
+DEFAULT_PROMPT = """You are a mystical guardian of this Minecraft realm. Protect the builders, punish griefers, and speak with ancient wisdom. Keep responses short and use phrases like "The void watches", "Fortune favors". Remember each player's interactions on this server separately."""
+
 def get_base_dir():
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -22,6 +24,14 @@ def create_profile(name):
 
     with open(os.path.join(path, "profile.json"), "w") as f:
         json.dump(config, f, indent=2)
+    
+    # Create default prompt.txt for AI
+    with open(os.path.join(path, "prompt.txt"), "w") as f:
+        f.write(DEFAULT_PROMPT)
+    
+    # Create empty memory.json for AI
+    with open(os.path.join(path, "memory.json"), "w") as f:
+        json.dump({"players": {}, "conversations": {}, "world_context": {}}, f)
 
     return path
 

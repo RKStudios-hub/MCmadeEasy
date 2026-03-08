@@ -3205,33 +3205,39 @@
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 const lines = data.lines || [];
+                const isHistory = data.is_history === true;
+                const isDelta = data.is_delta === true;
                 
                 const consoleDiv = document.getElementById('console-output');
                 
-                if (lines.length < lastLineCount) {
+                if (!consoleDiv) return;
+
+                if (isHistory) {
                     consoleDiv.innerHTML = '';
-                    lines.forEach(line => consoleDiv.insertAdjacentHTML('beforeend', renderConsoleLine(line)));
+                    lines.forEach(line => {
+                        if (line) consoleDiv.insertAdjacentHTML('beforeend', renderConsoleLine(line));
+                    });
                     lastLineCount = lines.length;
                     lastConsoleLine = lines[lines.length - 1] || '';
                     consoleDiv.scrollTop = consoleDiv.scrollHeight;
                     return;
                 }
 
-                if (lines.length === lastLineCount) {
-                    const tail = lines[lines.length - 1] || '';
-                    if (tail && tail !== lastConsoleLine) {
-                        consoleDiv.innerHTML = '';
-                        lines.forEach(line => consoleDiv.insertAdjacentHTML('beforeend', renderConsoleLine(line)));
-                        lastConsoleLine = tail;
-                        consoleDiv.scrollTop = consoleDiv.scrollHeight;
-                    }
+                if (isDelta && lines.length > 0) {
+                    lines.forEach(line => {
+                        if (line) consoleDiv.insertAdjacentHTML('beforeend', renderConsoleLine(line));
+                    });
+                    lastLineCount += lines.length;
+                    lastConsoleLine = lines[lines.length - 1] || '';
+                    consoleDiv.scrollTop = consoleDiv.scrollHeight;
                     return;
                 }
 
+                // Fallback for old protocol if needed (should not happen with updated backend)
                 if (lines.length > lastLineCount) {
                     const newLines = lines.slice(lastLineCount);
                     newLines.forEach(line => {
-                        consoleDiv.insertAdjacentHTML('beforeend', renderConsoleLine(line));
+                        if (line) consoleDiv.insertAdjacentHTML('beforeend', renderConsoleLine(line));
                     });
                     lastLineCount = lines.length;
                     lastConsoleLine = lines[lines.length - 1] || '';
@@ -3934,7 +3940,8 @@
                 const isRunning = statusData.running && statusData.profile === currentProfile;
                 
                 // Get all players who have ever joined (works even when offline)
-                const allRes = await fetch(`${API}/players/all`);
+                // Pass current profile name to get server-specific players
+                const allRes = await fetch(`${API}/players/all?profile=${encodeURIComponent(currentProfile || '')}`);
                 const allData = await allRes.json();
                 const allPlayers = allData.players || [];
                 

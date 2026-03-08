@@ -8,7 +8,10 @@ import re
 import random
 import time
 
-from profile_manager import create_profile, list_profiles, get_profile, update_profile, rename_profile, delete_profile
+from profile_manager import (
+    create_profile, list_profiles, get_profile, update_profile, 
+    rename_profile, delete_profile, get_base_dir, BASE_DIR
+)
 from downloader import (
     get_vanilla_versions, download_vanilla,
     get_paper_versions, get_paper_builds, download_paper,
@@ -49,10 +52,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-console_subscribers = []
-set_server_manager(server)
-console_subscribers = []
 
 async def broadcast_console_message(message: str):
     for ws in console_subscribers[:]:
@@ -515,11 +514,21 @@ def get_nearby_entities(player: str):
     return {"entities": entities}
 
 @app.get("/players/all")
-def get_all_players():
+def get_all_players(profile: str = None):
     """Get all players who have ever joined from usercache.json"""
-    profile_path = server.current_profile
+    profile_path = None
     
-    # If no profile loaded, try to get it from config
+    # If profile name provided, resolve to path
+    if profile:
+        profile_path = os.path.join(get_base_dir(), BASE_DIR, profile)
+        if not os.path.exists(profile_path):
+            profile_path = None
+            
+    # Fallback: current running server
+    if not profile_path:
+        profile_path = server.current_profile
+    
+    # Fallback: get it from config
     if not profile_path:
         config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "current_profile.json")
         if os.path.exists(config_path):
@@ -530,7 +539,7 @@ def get_all_players():
             except:
                 pass
     
-    # If still no profile, try to find any usercache in common locations
+    # Final fallback: find any usercache (this is what caused the bug, keep as last resort)
     if not profile_path:
         servers_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "servers")
         if os.path.exists(servers_dir):
@@ -698,7 +707,12 @@ async def ai_chat(request: Request, message: str = None, player: str = "Player")
 
     if not message:
         return {"response": None}
-
+    
+    # Get current server name for server-specific AI memory/prompts
+    server_name = None
+    if server.current_profile:
+        server_name = os.path.basename(server.current_profile)
+    
     # Deterministic TP path: execute directly even if intent/AI path misses this turn.
     forced_tp_commands = _build_tp_fallback_commands(message)
     if forced_tp_commands:
@@ -709,7 +723,7 @@ async def ai_chat(request: Request, message: str = None, player: str = "Player")
             "executed": executed
         }
 
-    result = ai_engine.mc_ai.process_message(message, player)
+    result = ai_engine.mc_ai.process_message(message, player, server_name)
     if result:
         commands_to_run = result.get("commands") or ([result.get("command")] if result.get("command") else [])
         if not commands_to_run:
@@ -778,13 +792,31 @@ async def console_ws(ws: WebSocket):
     await ws.accept()
     console_subscribers.append(ws)
     
+    # Send current history first
+    initial_lines = server.get_output()
+    if initial_lines:
+        await ws.send_json({"lines": initial_lines, "is_history": True})
+    
+    last_buffer = list(initial_lines)
+    
     try:
         while True:
             try:
-                lines = server.get_output()
-                if lines:
-                    data = {"lines": lines}
-                    await ws.send_json(data)
+                current_lines = server.get_output()
+                if current_lines:
+                    # Calculate delta
+                    overlap = 0
+                    max_overlap = min(len(last_buffer), len(current_lines))
+                    for k in range(max_overlap, 0, -1):
+                        if last_buffer[-k:] == current_lines[:k]:
+                            overlap = k
+                            break
+                    
+                    new_lines = current_lines[overlap:]
+                    if new_lines:
+                        await ws.send_json({"lines": new_lines, "is_delta": True})
+                        last_buffer = list(current_lines)
+                
                 await asyncio.sleep(0.5)
             except RuntimeError as e:
                 if 'close' in str(e).lower():
@@ -816,6 +848,12 @@ async def broadcast_console():
                 for new_line in new_lines:
                     if not new_line:
                         continue
+                    
+                    # Get server name for server-specific AI
+                    server_name = None
+                    if server.current_profile:
+                        server_name = os.path.basename(server.current_profile)
+                    
                     autonomous_response = ai_engine.mc_ai.process_console_line(new_line)
                     if autonomous_response:
                         ai_msg = f"[Ava] {autonomous_response}"
@@ -828,7 +866,7 @@ async def broadcast_console():
                         player = chat_match.group(1)
                         message = chat_match.group(2).strip()
                         
-                        result = ai_engine.mc_ai.process_message(message, player)
+                        result = ai_engine.mc_ai.process_message(message, player, server_name)
                         
                         print(f"[AI] Player: {player}, Mode: {ai_engine.mc_ai.mode}, Enabled: {ai_engine.mc_ai.is_enabled}")
                         if result:

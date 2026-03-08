@@ -149,8 +149,8 @@ class ServerManager:
                     clean_line = re.sub(r'\x1b\]\d+;[^\x07]*\x07', '', clean_line)  # OSC sequences
                     clean_line = re.sub(r'\x1b\[?[\d;]*[JKmsu]', '', clean_line)  # Other CSI sequences
                     self.output_lines.append(clean_line)
-                    if len(self.output_lines) > 1000:
-                        self.output_lines = self.output_lines[-500:]
+                    if len(self.output_lines) > 2000:
+                        self.output_lines = self.output_lines[-1000:]
             except Exception:
                 break
 
@@ -192,13 +192,13 @@ class ServerManager:
             return False, str(e)
 
     def get_output(self):
-        return self.output_lines[-100:]
+        return self.output_lines[-500:]
     
     def add_output_line(self, line):
         """Add a custom line to output (for AI responses)"""
         self.output_lines.append(line.strip())
-        if len(self.output_lines) > 1000:
-            self.output_lines = self.output_lines[-500:]
+        if len(self.output_lines) > 2000:
+            self.output_lines = self.output_lines[-1000:]
 
     def get_status(self):
         if self.is_running():
