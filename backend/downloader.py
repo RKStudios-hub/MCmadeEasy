@@ -214,11 +214,52 @@ def download_forge(version, full_version, path):
             timeout=300
         )
         
-        # Check if installation was successful - installer creates forge-*-universal.jar
+        # Check if installation was successful - Forge installer creates server jar in libraries
+        server_jar_in_libs = os.path.join(path, "libraries", "net", "minecraftforge", "forge", full_version, f"forge-{full_version}-server.jar")
+        
+        if os.path.exists(server_jar_in_libs):
+            # Copy to server.jar in root
+            import shutil
+            shutil.copy(server_jar_in_libs, os.path.join(path, "server.jar"))
+            
+            # Also create necessary config files
+            eula_path = os.path.join(path, "eula.txt")
+            if not os.path.exists(eula_path):
+                with open(eula_path, "w") as f:
+                    f.write("eula=true\n")
+            
+            # Copy server.properties from an existing server if available
+            servers_dir = os.path.dirname(path)
+            for item in os.listdir(servers_dir):
+                candidate = os.path.join(servers_dir, item, "server.properties")
+                if os.path.exists(candidate):
+                    shutil.copy(candidate, os.path.join(path, "server.properties"))
+                    break
+            
+            # If no server.properties was copied, create a basic one with Forge optimizations
+            if not os.path.exists(os.path.join(path, "server.properties")):
+                with open(os.path.join(path, "server.properties"), "w") as f:
+                    f.write("server-port=25565\n")
+                    f.write("max-players=20\n")
+                    f.write("online-mode=false\n")
+                    f.write("view-distance=8\n")
+                    f.write("simulation-distance=6\n")
+                    f.write("forge.server.early.login=false\n")
+            else:
+                # Add forge early login fix to existing server.properties
+                with open(os.path.join(path, "server.properties"), "r") as f:
+                    content = f.read()
+                
+                if "forge.server.early.login" not in content:
+                    with open(os.path.join(path, "server.properties"), "a") as f:
+                        f.write("\n#Forge early login fix\nforge.server.early.login=false\n")
+            
+            return True, "Forge installed successfully"
+        
+        # Fallback: check for universal jar
         import glob
         universal_jars = glob.glob(os.path.join(path, "forge-*-universal.jar"))
         if universal_jars:
-            # Copy to server.jar
             import shutil
             shutil.copy(universal_jars[0], os.path.join(path, "server.jar"))
             return True, "Forge installed successfully"

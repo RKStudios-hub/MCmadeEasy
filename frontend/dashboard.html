@@ -1757,6 +1757,28 @@
             padding: 40px;
             color: var(--text-muted);
         }
+        
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body class="state-profiles">
@@ -2411,7 +2433,7 @@
             </div>
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="createProfile()">Create</button>
+                <button class="btn btn-primary" id="create-profile-btn" onclick="createProfile()">Create</button>
             </div>
         </div>
     </div>
@@ -3069,6 +3091,13 @@
             
             if (!name) return;
             
+            // Show loading spinner on button
+            const btn = document.getElementById('create-profile-btn');
+            const originalBtnContent = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner"></span> Creating...';
+            btn.disabled = true;
+            
+            // Create profile first
             await fetch(`${API}/profile/${name}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -3080,54 +3109,63 @@
                 })
             });
             
-            // Download server software after creating profile
-            if (software !== 'vanilla') {
-                try {
-                    let buildNum = build;
-                    // If no build specified, get latest for Paper
-                    if (!buildNum && software === 'paper') {
-                        const buildsRes = await fetch(`${API}/paper/${version}/builds`);
-                        const builds = await buildsRes.json();
-                        buildNum = builds[builds.length - 1];
-                    }
-                    
-                    const downloadRes = await fetch(
-                        `${API}/profile/${name}/download?software=${software}&version=${version}${buildNum ? `&build=${buildNum}` : ''}`, 
-                        { method: 'POST' }
-                    );
-                    const downloadData = await downloadRes.json();
-                    
-                    if (!downloadData.success) {
-                        alert('Profile created but download failed: ' + downloadData.message);
-                        closeModal();
-                        loadProfiles();
-                        return;
-                    }
-                } catch(e) {
-                    console.log('Auto-download skipped:', e);
-                }
-            } else {
-                // For vanilla
-                try {
-                    const downloadRes = await fetch(
-                        `${API}/profile/${name}/download?software=${software}&version=${version}`, 
-                        { method: 'POST' }
-                    );
-                    const downloadData = await downloadRes.json();
-                    
-                    if (!downloadData.success) {
-                        alert('Profile created but download failed: ' + downloadData.message);
-                        closeModal();
-                        loadProfiles();
-                        return;
-                    }
-                } catch(e) {
-                    console.log('Auto-download skipped:', e);
-                }
-            }
+            // Get profile path for this server
+            const profilePath = `${name}`;
             
-            closeModal();
-            loadProfiles();
+            // Download server software based on type
+            try {
+                if (software !== 'vanilla') {
+                    try {
+                        let buildNum = build;
+                        // If no build specified, get latest for Paper
+                        if (!buildNum && software === 'paper') {
+                            const buildsRes = await fetch(`${API}/paper/${version}/builds`);
+                            const builds = await buildsRes.json();
+                            buildNum = builds[builds.length - 1];
+                        }
+                        
+                        const downloadRes = await fetch(
+                            `${API}/profile/${name}/download?software=${software}&version=${version}${buildNum ? `&build=${buildNum}` : ''}`, 
+                            { method: 'POST' }
+                        );
+                        const downloadData = await downloadRes.json();
+                        
+                        if (!downloadData.success) {
+                            alert('Profile created but download failed: ' + downloadData.message);
+                            closeModal();
+                            loadProfiles();
+                            return;
+                        }
+                    } catch(e) {
+                        console.log('Auto-download skipped:', e);
+                    }
+                } else {
+                    // For vanilla
+                    try {
+                        const downloadRes = await fetch(
+                            `${API}/profile/${name}/download?software=${software}&version=${version}`, 
+                            { method: 'POST' }
+                        );
+                        const downloadData = await downloadRes.json();
+                        
+                        if (!downloadData.success) {
+                            alert('Profile created but download failed: ' + downloadData.message);
+                            closeModal();
+                            loadProfiles();
+                            return;
+                        }
+                    } catch(e) {
+                        console.log('Auto-download skipped:', e);
+                    }
+                }
+                
+                closeModal();
+                loadProfiles();
+            } finally {
+                // Restore button
+                btn.innerHTML = originalBtnContent;
+                btn.disabled = false;
+            }
         }
 
         // Console

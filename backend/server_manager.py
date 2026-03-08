@@ -56,15 +56,51 @@ class ServerManager:
         
         # Handle different server software
         if software in ["forge", "neoforge"]:
-            # Forge/NeoForge - ensure valid runnable JAR
-            cmd = [
-                JAVA_PATH,
-                f"-Xmx{ram_max}",
-                f"-Xms{ram_min}",
-                "-jar",
-                "server.jar",
-                "nogui"
-            ]
+            # Find the forge version dynamically from the libraries folder
+            forge_dir = "net/minecraftforge/forge" if software == "forge" else "net/neoforged"
+            libraries_forge_path = os.path.join(profile_path, "libraries", forge_dir)
+            
+            forge_version = None
+            if os.path.exists(libraries_forge_path):
+                # Find the version folder (e.g., 1.20.1-47.4.10)
+                for item in os.listdir(libraries_forge_path):
+                    item_path = os.path.join(libraries_forge_path, item)
+                    if os.path.isdir(item_path):
+                        forge_version = item
+                        break
+            
+            if not forge_version:
+                # Fallback to hardcoded version
+                forge_version = "1.20.1-47.4.10" if software == "forge" else "1.20.1-47.4.10"
+            
+            # Forge command with @args files
+            win_args_path = os.path.join(profile_path, "libraries", forge_dir, forge_version, "win_args.txt")
+            
+            if os.path.exists(win_args_path):
+                # Use the @args approach for Forge
+                cmd = [
+                    JAVA_PATH,
+                    f"-Xmx{ram_max}",
+                    f"-Xms{ram_min}"
+                ]
+                
+                # Check for user_jvm_args.txt
+                user_jvm_args_path = os.path.join(profile_path, "user_jvm_args.txt")
+                if os.path.exists(user_jvm_args_path):
+                    cmd.append(f"@{user_jvm_args_path}")
+                
+                cmd.append(f"@{win_args_path}")
+                cmd.append("nogui")
+            else:
+                # Fallback: try running with -jar
+                cmd = [
+                    JAVA_PATH,
+                    f"-Xmx{ram_max}",
+                    f"-Xms{ram_min}",
+                    "-jar",
+                    "server.jar",
+                    "nogui"
+                ]
         else:
             cmd = [
                 JAVA_PATH,
