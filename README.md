@@ -22,16 +22,16 @@ It's an intelligent overseer for your world.
 
 ---
 
-## 🎮 Works With All Server Types
+## 🎮 Currently Working Server Types
 
 MCmadeEasy supports **any** Minecraft server JAR:
 
-* **Paper** — Performance-optimized Spigot fork
-* **Fabric** — Lightweight modding platform
-* **Forge** — Classic modding API
-* **Spigot** — Popular server software
-* **Bukkit** — The original server API
-* **Vanilla** — Clean default experience
+• **Paper** – High-performance Spigot fork  
+• **Purpur** – Advanced customizable Paper fork  
+• **Fabric** – Lightweight modding platform  
+• **Forge** – Popular modding framework  
+• **Vanilla** – Official Minecraft server  
+• **NeoForge** – *(Integration in progress)*
 
 Just select your preferred server type when creating a profile!
 
