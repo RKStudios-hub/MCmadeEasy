@@ -117,9 +117,6 @@ Features include:
 
 # 📸 How It Looks
 
-> ⚠️ **Note**  
-> The dashboard and features are **still under active development**, so the UI and functionality may change over time.
-
 <p align="center">
 <img src="How it looks/1.png" width="32%">
 <img src="How it looks/2.png" width="32%">
@@ -143,6 +140,9 @@ Features include:
 <img src="How it looks/11.png" width="32%">
 <img src="How it looks/12.png" width="32%">
 </p>
+
+> ⚠️ **Note**  
+> The dashboard and features are **still under active development**, so the UI and functionality may change over time.
 
 ---
 
