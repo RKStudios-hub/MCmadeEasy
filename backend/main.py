@@ -163,15 +163,18 @@ def _execute_ai_commands(commands_to_run, player):
                         else:
                             server.send_command(f"tp {target} {x} ~ {z}")
                         clean = _clean_locate_message(locate_resp) or "Located destination."
-                        server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{clean} Teleporting now.","color":"white"}}]')
+                        escaped_clean = clean.replace('"', '\\"')
+                        server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{escaped_clean} Teleporting now.","color":"white"}}]')
                         feedback.append(f"{clean} Teleporting now.")
                     else:
                         msg = f"Could not parse locate output for {structure}."
-                        server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{msg}","color":"white"}}]')
+                        escaped_msg = msg.replace('"', '\\"')
+                        server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{escaped_msg}","color":"white"}}]')
                         feedback.append(msg)
                 else:
                     msg = f"Locate failed for {structure}."
-                    server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{msg}","color":"white"}}]')
+                    escaped_msg = msg.replace('"', '\\"')
+                    server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{escaped_msg}","color":"white"}}]')
                     feedback.append(msg)
         elif isinstance(cmd, str) and cmd.startswith("LOCATE:"):
             parts = cmd.split(":", 1)
@@ -180,11 +183,13 @@ def _execute_ai_commands(commands_to_run, player):
                 locate_resp = server.locate_structure(player, structure)
                 if locate_resp:
                     clean = _clean_locate_message(locate_resp) or locate_resp
-                    server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{clean}","color":"white"}}]')
+                    escaped_clean = clean.replace('"', '\\"')
+                    server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{escaped_clean}","color":"white"}}]')
                     feedback.append(clean)
                 else:
                     msg = f"Locate failed for {structure}."
-                    server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{msg}","color":"white"}}]')
+                    escaped_msg = msg.replace('"', '\\"')
+                    server.send_command(f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{escaped_msg}","color":"white"}}]')
                     feedback.append(msg)
         else:
             server.send_command(cmd)
@@ -858,7 +863,8 @@ async def broadcast_console():
                     if autonomous_response:
                         ai_msg = f"[Ava] {autonomous_response}"
                         server.add_output_line(ai_msg)
-                        command = f'tellraw @a [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{autonomous_response}","color":"white"}}]'
+                        escaped_response = autonomous_response.replace('"', '\\"')
+                        command = f'tellraw @a [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{escaped_response}","color":"white"}}]'
                         server.send_command(command)
                     
                     chat_match = re.search(r'(?:\[.*?\]\s*)?<([^>]+)> (.+)', new_line)
@@ -895,7 +901,8 @@ async def broadcast_console():
                             if response:
                                 ai_msg = f"[Ava -> {player}] {response}"
                                 server.add_output_line(ai_msg)
-                                command = f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{response}","color":"white"}}]'
+                                escaped_response = response.replace('"', '\\"')
+                                command = f'tellraw {player} [{{"text":"[{ai_engine.mc_ai.ai_name}] ","color":"light_purple"}},{{"text":"{escaped_response}","color":"white"}}]'
                                 server.send_command(command)
                         
                         if result:

@@ -161,6 +161,19 @@ class CommandBuilder:
         if intent not in self.templates:
             return None
 
+        # Basic item translation map
+        item_map = {
+            "night_vision": 'minecraft:potion{Potion:"minecraft:night_vision"}',
+            "invisibility": 'minecraft:potion{Potion:"minecraft:invisibility"}',
+            "healing": 'minecraft:potion{Potion:"minecraft:healing"}',
+            "regeneration": 'minecraft:potion{Potion:"minecraft:regeneration"}',
+            "strength": 'minecraft:potion{Potion:"minecraft:strength"}',
+            "speed": 'minecraft:potion{Potion:"minecraft:swiftness"}',
+            "fire_resistance": 'minecraft:potion{Potion:"minecraft:fire_resistance"}',
+            "water_breathing": 'minecraft:potion{Potion:"minecraft:water_breathing"}',
+            "leaping": 'minecraft:potion{Potion:"minecraft:leaping"}',
+        }
+
         if intent == "raw_command":
             command = (parameters.get("command") or "").strip()
             if not command:
@@ -176,6 +189,8 @@ class CommandBuilder:
             commands = []
             for item_data in items:
                 item = item_data.get("item", "")
+                if item in item_map:
+                    item = item_map[item]
                 amount = item_data.get("amount", 1)
                 if item:
                     cmd = f"give {target} {item} {amount}"
@@ -203,6 +218,10 @@ class CommandBuilder:
         cmd = template["template"]
         
         params = parameters.copy()
+        
+        # Apply item translation if present
+        if "item" in params and params["item"] in item_map:
+            params["item"] = item_map[params["item"]]
         
         if intent == "teleport" and "destination" in params:
             resolved = self._resolve_destination(params["destination"])
@@ -343,6 +362,27 @@ class CommandBuilder:
         if gamemode_match:
             return f"gamemode {gamemode_match.group(1)} @a"
 
+        give_match = re.match(r"^give\s+([@a-z0-9_]+)\s+([a-z0-9_:]+)(?:\s+(\d+))?$", lower)
+        if give_match:
+            target = give_match.group(1)
+            item = give_match.group(2)
+            amount = give_match.group(3) or "1"
+            
+            # Use the local item_map (manual local lookup for simplicity here)
+            local_item_map = {
+                "night_vision": 'minecraft:potion{Potion:"minecraft:night_vision"}',
+                "invisibility": 'minecraft:potion{Potion:"minecraft:invisibility"}',
+                "healing": 'minecraft:potion{Potion:"minecraft:healing"}',
+                "regeneration": 'minecraft:potion{Potion:"minecraft:regeneration"}',
+                "strength": 'minecraft:potion{Potion:"minecraft:strength"}',
+                "speed": 'minecraft:potion{Potion:"minecraft:swiftness"}',
+                "fire_resistance": 'minecraft:potion{Potion:"minecraft:fire_resistance"}',
+                "water_breathing": 'minecraft:potion{Potion:"minecraft:water_breathing"}',
+                "leaping": 'minecraft:potion{Potion:"minecraft:leaping"}',
+            }
+            if item in local_item_map:
+                return f"give {target} {local_item_map[item]} {amount}"
+
         tp_me_match = re.match(r"^(tp|teleport)\s+me\s+(.+)$", cmd, re.IGNORECASE)
         if tp_me_match:
             raw_dest = tp_me_match.group(2).strip()
@@ -395,6 +435,11 @@ class CommandBuilder:
                 "villagers": "villager",
                 "vilager": "villager",
                 "vilagers": "villager",
+                "zombie piglin": "zombified_piglin",
+                "zombie_piglin": "zombified_piglin",
+                "piglin": "piglin",
+                "piglins": "piglin",
+                "zombified_piglin": "zombified_piglin",
             }
             if entity_text in entity_map:
                 entity = entity_map[entity_text]
