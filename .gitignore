@@ -30,11 +30,15 @@ node_modules/
 package-lock.json
 
 # Personal / Sensitive
-config.json
-.env
-backups/
-backend/data/
-data/
+**/config.json
+**/.env
+**/backups/
+**/backend/data/
+**/data/
+**/logs/
+**/servers/
+**/temp/
+**/tmp/
 *.zip
 *.JAR
 *.txt
