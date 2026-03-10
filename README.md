@@ -33,7 +33,7 @@ This isn't just a control panel.
 It's an **intelligent overseer for your world.**
 
 ---
-<img src="How it looks/Banner.png" height="300px" width="100%">
+<img src="How it looks/Banner.png" height="320px" width="100%">
 
 ---
 
@@ -122,27 +122,33 @@ Features include:
 # 📸 How It Looks
 
 <p align="center">
-<img src="How it looks/1.png" width="32%">
-<img src="How it looks/2.png" width="32%">
-<img src="How it looks/3.png" width="32%">
+<img src="How it looks/1.png" width="49%">
+<img src="How it looks/2.png" width="49%">
 </p>
 
 <p align="center">
-<img src="How it looks/4.png" width="32%">
-<img src="How it looks/5.png" width="32%">
-<img src="How it looks/6.png" width="32%">
+<img src="How it looks/3.png" width="49%">
+<img src="How it looks/4.png" width="49%">
 </p>
 
 <p align="center">
-<img src="How it looks/7.png" width="32%">
-<img src="How it looks/8.png" width="32%">
-<img src="How it looks/9.png" width="32%">
+<img src="How it looks/5.png" width="49%">
+<img src="How it looks/6.png" width="49%">
 </p>
 
 <p align="center">
-<img src="How it looks/10.png" width="32%">
-<img src="How it looks/11.png" width="32%">
-<img src="How it looks/12.png" width="32%">
+<img src="How it looks/7.png" width="49%">
+<img src="How it looks/8.png" width="49%">
+</p>
+
+<p align="center">
+<img src="How it looks/9.png" width="49%">
+<img src="How it looks/10.png" width="49%">
+</p>
+
+<p align="center">
+<img src="How it looks/11.png" width="49%">
+<img src="How it looks/12.png" width="49%">
 </p>
 
 > ## **Note**  
