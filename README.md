@@ -33,6 +33,10 @@ This isn't just a control panel.
 It's an **intelligent overseer for your world.**
 
 ---
+<img src="How it looks/Banner.png" height="300px" width="100%">
+
+---
+
 
 # 🎮 Currently Working Server Types
 
