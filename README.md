@@ -33,7 +33,7 @@ This isn't just a control panel.
 It's an **intelligent overseer for your world.**
 
 ---
-<img src="How it looks/Banner.png" height="320px" width="100%">
+<img src="How it looks/Banner.png" height="400px" width="100%">
 
 ---
 
@@ -300,5 +300,6 @@ Thank you for your understanding and support.
 ---
 
 <p align="center">
-Made with 🖤 by <b>RK Studios</b>
+  <img src="How it looks/MCmadeEasy.png" width="100%">
+  <h1 align="center">Made with 🖤 by <b>RK Studios</b></h1>
 </p>
